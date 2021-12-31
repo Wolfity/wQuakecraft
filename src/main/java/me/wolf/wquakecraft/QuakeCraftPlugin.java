@@ -3,7 +3,9 @@ package me.wolf.wquakecraft;
 import me.wolf.wquakecraft.arena.ArenaManager;
 import me.wolf.wquakecraft.commands.impl.QuakeCommand;
 import me.wolf.wquakecraft.files.FileManager;
+import me.wolf.wquakecraft.game.GameManager;
 import me.wolf.wquakecraft.player.PlayerManager;
+import me.wolf.wquakecraft.scoreboards.QuakeScoreboard;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandMap;
@@ -18,6 +20,8 @@ public class QuakeCraftPlugin extends JavaPlugin {
     private FileManager fileManager;
     private PlayerManager playerManager;
     private ArenaManager arenaManager;
+    private GameManager gameManager;
+    private QuakeScoreboard quakeScoreboard;
 
     @Override
     public void onEnable() {
@@ -54,6 +58,8 @@ public class QuakeCraftPlugin extends JavaPlugin {
         this.fileManager = new FileManager(this);
         this.playerManager = new PlayerManager();
         this.arenaManager = new ArenaManager(fileManager.getArenasConfigFile());
+        this.gameManager = new GameManager(this);
+        this.quakeScoreboard = new QuakeScoreboard(this);
 
         arenaManager.loadArenas();
     }
@@ -68,5 +74,13 @@ public class QuakeCraftPlugin extends JavaPlugin {
 
     public ArenaManager getArenaManager() {
         return arenaManager;
+    }
+
+    public GameManager getGameManager() {
+        return gameManager;
+    }
+
+    public QuakeScoreboard getQuakeScoreboard() {
+        return quakeScoreboard;
     }
 }

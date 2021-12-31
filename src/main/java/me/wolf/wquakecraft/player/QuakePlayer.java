@@ -12,10 +12,12 @@ public class QuakePlayer {
 
     private final UUID uuid;
     private int kills;
+    private PlayerState playerState;
 
     public QuakePlayer(final UUID uuid) {
         this.uuid = uuid;
         this.kills = 0;
+        this.playerState = PlayerState.IN_QUAKE;
     }
 
     public int getKills() {
@@ -50,6 +52,14 @@ public class QuakePlayer {
         getBukkitPlayer().setFoodLevel(20);
     }
 
+    public PlayerState getPlayerState() {
+        return playerState;
+    }
+
+    public void setPlayerState(PlayerState playerState) {
+        this.playerState = playerState;
+    }
+
     public World getWorld() {
         return getLocation().getWorld();
     }
@@ -76,6 +86,18 @@ public class QuakePlayer {
 
     public Location getLocation() {
         return getBukkitPlayer().getLocation();
+    }
+
+    public void clearFullInv() {
+        getBukkitPlayer().getInventory().clear();
+        getBukkitPlayer().getInventory().setHelmet(null);
+        getBukkitPlayer().getInventory().setChestplate(null);
+        getBukkitPlayer().getInventory().setLeggings(null);
+        getBukkitPlayer().getInventory().setBoots(null);
+    }
+
+    public boolean isInGame() {
+        return playerState == PlayerState.IN_GAME;
     }
 
     public UUID getUuid() {

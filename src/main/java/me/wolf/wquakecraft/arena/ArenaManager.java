@@ -1,10 +1,12 @@
 package me.wolf.wquakecraft.arena;
 
 import me.wolf.wquakecraft.files.YamlConfig;
+import me.wolf.wquakecraft.player.QuakePlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ArenaManager {
 
@@ -21,7 +23,6 @@ public class ArenaManager {
         cfg.getConfig().createSection("arenas." + name);
         cfg.getConfig().set("arenas." + name + ".max-players", arena.getMaxPlayers());
         cfg.getConfig().set("arenas." + name + ".min-players", arena.getMinPlayers());
-        cfg.getConfig().set("arenas." + name + ".game-countdown", arena.getGameCountdown());
         cfg.getConfig().set("arenas." + name + ".lobby-countdown", arena.getLobbyCountdown());
         cfg.getConfig().set("arenas." + name + ".game-timer", arena.getGameTimer());
         cfg.saveConfig();
@@ -35,7 +36,6 @@ public class ArenaManager {
                 final List<Location> spawnLocations = new ArrayList<>();
                 final int maxPlayers = cfg.getConfig().getInt("arenas." + arenaName + ".max-players");
                 final int minPlayers = cfg.getConfig().getInt("arenas." + arenaName + ".min-players");
-                final int gameCountdown = cfg.getConfig().getInt("arenas." + arenaName + ".game-countdown");
                 final int lobbyCountdown = cfg.getConfig().getInt("arenas." + arenaName + ".lobby-countdown");
                 final int gameTimer = cfg.getConfig().getInt("arenas." + arenaName + ".game-timer");
                 final Location lobbyLoc = new Location(Bukkit.getWorld(Objects.requireNonNull(
@@ -56,11 +56,10 @@ public class ArenaManager {
                             (float) cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".pitch")));
                 }
 
-                arenas.add(new Arena(arenaName, maxPlayers, minPlayers, gameTimer, gameCountdown, lobbyCountdown, spawnLocations, lobbyLoc));
+                arenas.add(new Arena(arenaName, maxPlayers, minPlayers, gameTimer, lobbyCountdown, spawnLocations, lobbyLoc));
                 Bukkit.getLogger().info("[QUAKECRAFT] SUCCESSFULLY LOADED THE ARENA:  " + arenaName);
             }
         } catch (final NullPointerException e) {
-            e.printStackTrace();
             Bukkit.getLogger().info("No Arenas were loaded!");
         }
     }
@@ -86,5 +85,17 @@ public class ArenaManager {
 
     public Arena getArenaByName(final String name) { // get an arena by passing in the string name
         return arenas.stream().filter(arena -> arena.getName().equalsIgnoreCase(name)).findFirst().orElse(null);
+    }
+
+    public Set<Arena> getAllFreeArenas() {
+        return arenas.stream().filter(arena -> arena.getArenaState() == ArenaState.READY).collect(Collectors.toSet());
+    }
+
+    public Arena getArenaByPlayer(final QuakePlayer quakePlayer) {
+        return arenas.stream().filter(arena -> arena.getArenaMembers().contains(quakePlayer)).findFirst().orElse(null);
+    }
+
+    public boolean isArenaAvailable(final String name) { // checking if the game is available (in the right state)
+        return getArenaByName(name) != null && getArenaByName(name).getArenaState() == ArenaState.READY;
     }
 }

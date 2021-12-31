@@ -3,16 +3,13 @@ package me.wolf.wquakecraft.arena;
 import me.wolf.wquakecraft.player.QuakePlayer;
 import org.bukkit.Location;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class Arena {
 
     private final String name;
     private ArenaState arenaState;
-    private int maxPlayers, minPlayers, gameTimer, gameCountdown, lobbyCountdown;
+    private int maxPlayers, minPlayers, gameTimer, lobbyCountdown;
     private final Set<QuakePlayer> arenaMembers;
     private final List<Location> spawnLocations;
     private Location lobbyLocation;
@@ -23,19 +20,17 @@ public class Arena {
         this.maxPlayers = 10;
         this.minPlayers = 2;
         this.gameTimer = 300;
-        this.gameCountdown = 10;
         this.lobbyCountdown = 10;
         this.arenaMembers = new HashSet<>();
         this.spawnLocations = new ArrayList<>();
     }
 
     public Arena(final String name, final int maxPlayers, final int minPlayers, final int gameTimer,
-                 final int gameCountdown, final int lobbyCountdown, final List<Location> spawnLocations, final Location lobbyLocation) {
+                 final int lobbyCountdown, final List<Location> spawnLocations, final Location lobbyLocation) {
         this.name = name;
         this.maxPlayers = maxPlayers;
         this.minPlayers = minPlayers;
         this.gameTimer = gameTimer;
-        this.gameCountdown = gameCountdown;
         this.lobbyCountdown = lobbyCountdown;
         this.arenaState = ArenaState.READY;
         this.arenaMembers = new HashSet<>();
@@ -82,20 +77,12 @@ public class Arena {
         this.arenaMembers.remove(quakePlayer);
     }
 
-    public int getGameCountdown() {
-        return gameCountdown;
-    }
-
     public int getGameTimer() {
         return gameTimer;
     }
 
     public int getLobbyCountdown() {
         return lobbyCountdown;
-    }
-
-    public void setGameCountdown(int gameCountdown) {
-        this.gameCountdown = gameCountdown;
     }
 
     public void setGameTimer(int gameTimer) {
@@ -120,5 +107,26 @@ public class Arena {
 
     public List<Location> getSpawnLocations() {
         return spawnLocations;
+    }
+
+    public void decrementLobbyCountdown() {
+        this.lobbyCountdown--;
+    }
+
+    public void decrementGameTimer() {
+        this.gameTimer--;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Arena arena = (Arena) o;
+        return name.equals(arena.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
     }
 }
