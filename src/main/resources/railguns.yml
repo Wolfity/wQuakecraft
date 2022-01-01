@@ -1,0 +1,9 @@
+railguns:
+  default: # Do not remove this default tag
+    name: "&bRail Gun"
+    material: IRON_HOE
+    fire-rate: 40 # ticks
+  pro:
+    name: "&cExpert Gun"
+    material: DIAMOND_HOE
+    fire-rate: 35

@@ -7,8 +7,11 @@ import me.wolf.wquakecraft.commands.BaseCommand;
 import me.wolf.wquakecraft.files.YamlConfig;
 import me.wolf.wquakecraft.player.PlayerState;
 import me.wolf.wquakecraft.player.QuakePlayer;
+import me.wolf.wquakecraft.utils.ItemUtils;
 import me.wolf.wquakecraft.utils.Utils;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -39,11 +42,14 @@ public class QuakeCommand extends BaseCommand {
         if (args.length == 1) {
             if (isAdmin()) {
                 if (args[0].equalsIgnoreCase("admin")) {
-                   tell("&7[---------- &bQuake Admin Help &7----------]\n" +
+                    tell("&7[---------- &bQuake Admin Help &7----------]\n" +
                             "&b/quake createarena <name> &7- Create an arena \n" +
                             "&b/quake removearena <name> &7- Remove an arena \n" +
                             "&b/quake addspawn <name> &7- Add an arena spawn to the arena\n" +
                             "[--------------------------------------]");
+                } else if (args[0].equalsIgnoreCase("sethub")) {
+                    tell("&aSuccessfully set the Quake Hub!");
+                    setHub(player.getLocation());
                 }
             }
             if (args[0].equalsIgnoreCase("join")) {
@@ -51,13 +57,18 @@ public class QuakeCommand extends BaseCommand {
                     plugin.getPlayerManager().createQuakePlayer(player.getUniqueId());
                     plugin.getQuakeScoreboard().lobbyScoreboard(player);
                     tell("&aSuccessfully joined quake!");
+                    player.getInventory().setItem(0, ItemUtils.createItem(Material.WOODEN_HOE, "&cChoose a Rail Gun"));
+
                 } else tell("&aYou are already in quakecraft!");
 
             } else if (args[0].equalsIgnoreCase("leave")) {
                 if (quakePlayer != null) {
                     tell("&aSuccessfully left quakecraft, cya!");
+                    quakePlayer.getInventory().removeItem(ItemUtils.createItem(Material.WOODEN_HOE, "&cChoose a Rail Gun"));
                     plugin.getPlayerManager().removeQuakePlayer(player.getUniqueId());
                     player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+
+
                 } else tell("&cYou are not in quakecraft!");
 
             } else if (args[0].equalsIgnoreCase("arenas")) {
@@ -157,4 +168,15 @@ public class QuakeCommand extends BaseCommand {
             quakePlayer.sendMessage("&aSuccessfully set the lobby spawn for &2" + arenaName);
         } else quakePlayer.sendMessage("&cThis arena does not exist!");
     }
+
+    private void setHub(final Location location) {
+        plugin.getConfig().set("spawn.world", location.getWorld().getName());
+        plugin.getConfig().set("spawn.x", location.getX());
+        plugin.getConfig().set("spawn.y", location.getY());
+        plugin.getConfig().set("spawn.z", location.getZ());
+        plugin.getConfig().set("spawn.pitch", location.getPitch());
+        plugin.getConfig().set("spawn.yaw", location.getY());
+        plugin.saveConfig();
+    }
+
 }

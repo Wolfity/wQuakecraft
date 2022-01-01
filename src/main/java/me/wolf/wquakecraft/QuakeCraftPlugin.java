@@ -4,7 +4,11 @@ import me.wolf.wquakecraft.arena.ArenaManager;
 import me.wolf.wquakecraft.commands.impl.QuakeCommand;
 import me.wolf.wquakecraft.files.FileManager;
 import me.wolf.wquakecraft.game.GameManager;
+import me.wolf.wquakecraft.listeners.BlockBreak;
+import me.wolf.wquakecraft.listeners.BlockPlace;
+import me.wolf.wquakecraft.listeners.InventoryInteractions;
 import me.wolf.wquakecraft.player.PlayerManager;
+import me.wolf.wquakecraft.railgun.RailGunManager;
 import me.wolf.wquakecraft.scoreboards.QuakeScoreboard;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -22,6 +26,7 @@ public class QuakeCraftPlugin extends JavaPlugin {
     private ArenaManager arenaManager;
     private GameManager gameManager;
     private QuakeScoreboard quakeScoreboard;
+    private RailGunManager railGunManager;
 
     @Override
     public void onEnable() {
@@ -32,6 +37,8 @@ public class QuakeCraftPlugin extends JavaPlugin {
 
         registerManagers();
         registerCommands();
+        registerListeners();
+
     }
 
     private void registerCommands() {
@@ -39,6 +46,14 @@ public class QuakeCraftPlugin extends JavaPlugin {
                 new QuakeCommand(this)
         ).forEach(this::registerCommand);
 
+    }
+
+    private void registerListeners() {
+        Arrays.asList(
+                new BlockPlace(this),
+                new BlockBreak(this),
+                new InventoryInteractions(this)
+        ).forEach(listener -> Bukkit.getPluginManager().registerEvents(listener, this));
     }
 
     private void registerCommand(final Command command) {
@@ -60,7 +75,9 @@ public class QuakeCraftPlugin extends JavaPlugin {
         this.arenaManager = new ArenaManager(fileManager.getArenasConfigFile());
         this.gameManager = new GameManager(this);
         this.quakeScoreboard = new QuakeScoreboard(this);
+        this.railGunManager = new RailGunManager();
 
+        railGunManager.loadRailGuns(fileManager.getRailGunsConfig());
         arenaManager.loadArenas();
     }
 
@@ -82,5 +99,9 @@ public class QuakeCraftPlugin extends JavaPlugin {
 
     public QuakeScoreboard getQuakeScoreboard() {
         return quakeScoreboard;
+    }
+
+    public RailGunManager getRailGunManager() {
+        return railGunManager;
     }
 }

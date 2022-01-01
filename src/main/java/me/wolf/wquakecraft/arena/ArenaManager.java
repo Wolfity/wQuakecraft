@@ -25,6 +25,7 @@ public class ArenaManager {
         cfg.getConfig().set("arenas." + name + ".min-players", arena.getMinPlayers());
         cfg.getConfig().set("arenas." + name + ".lobby-countdown", arena.getLobbyCountdown());
         cfg.getConfig().set("arenas." + name + ".game-timer", arena.getGameTimer());
+        cfg.getConfig().set("arenas." + name + ".max-kills", arena.getMaxKills());
         cfg.saveConfig();
 
         arenas.add(arena);
@@ -38,6 +39,8 @@ public class ArenaManager {
                 final int minPlayers = cfg.getConfig().getInt("arenas." + arenaName + ".min-players");
                 final int lobbyCountdown = cfg.getConfig().getInt("arenas." + arenaName + ".lobby-countdown");
                 final int gameTimer = cfg.getConfig().getInt("arenas." + arenaName + ".game-timer");
+                final int maxKills = cfg.getConfig().getInt("arenas." + arenaName + ".max-kills");
+
                 final Location lobbyLoc = new Location(Bukkit.getWorld(Objects.requireNonNull(
                         cfg.getConfig().getString("arenas." + arenaName + ".lobby-world"))),
                         cfg.getConfig().getDouble("arenas." + arenaName + ".lobby-x"),
@@ -56,7 +59,7 @@ public class ArenaManager {
                             (float) cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".pitch")));
                 }
 
-                arenas.add(new Arena(arenaName, maxPlayers, minPlayers, gameTimer, lobbyCountdown, spawnLocations, lobbyLoc));
+                arenas.add(new Arena(arenaName, maxPlayers, minPlayers, gameTimer, lobbyCountdown, spawnLocations, lobbyLoc, maxKills));
                 Bukkit.getLogger().info("[QUAKECRAFT] SUCCESSFULLY LOADED THE ARENA:  " + arenaName);
             }
         } catch (final NullPointerException e) {

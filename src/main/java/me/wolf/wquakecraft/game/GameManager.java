@@ -5,6 +5,8 @@ import me.wolf.wquakecraft.arena.Arena;
 import me.wolf.wquakecraft.arena.ArenaState;
 import me.wolf.wquakecraft.player.PlayerState;
 import me.wolf.wquakecraft.player.QuakePlayer;
+import me.wolf.wquakecraft.railgun.RailGun;
+import me.wolf.wquakecraft.utils.ItemUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -21,6 +23,7 @@ public class GameManager {
 
     private final Set<Game> games = new HashSet<>();
 
+    // handling every specific game event based on the game state
     public void setGameState(final Game game, final GameState gameState) {
         final Arena arena = game.getArena();
         switch (gameState) {
@@ -34,39 +37,51 @@ public class GameManager {
                 game.setGameState(gameState);
                 arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.setPlayerState(PlayerState.IN_GAME));
                 teleportToSpawn(arena);
+                giveGuns(arena);
                 startGameTimer(game);
+                sendGameMessage(game, false);
+
                 break;
             case END:
                 arena.setArenaState(ArenaState.END);
                 game.setGameState(gameState);
                 arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.setPlayerState(PlayerState.IN_GAME));
-
+                sendGameMessage(game, true);
                 Bukkit.getScheduler().runTaskLater(plugin, () -> cleanupGame(game), 200L); // give 200 sec before cleaning up
                 break;
         }
     }
 
+    // cleaning up everything after the game, remove players from the game, remove the arena from the game, etc...
     private void cleanupGame(final Game game) {
         final Arena arena = game.getArena();
         arena.setArenaState(ArenaState.READY);
         arena.setGameTimer(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".game-timer"));
 
-        // teleporting them to the lobby
-        arena.getArenaMembers().forEach(quakePlayer -> {
-            quakePlayer.clearFullInv();
-            quakePlayer.resetHunger();
-            quakePlayer.teleport(
-                    new Location(Bukkit.getWorld(Objects.requireNonNull(plugin.getConfig().getString("world"))),
-                            plugin.getConfig().getDouble("x"),
-                            plugin.getConfig().getDouble("y"),
-                            plugin.getConfig().getDouble("z"),
-                            (float) plugin.getConfig().getDouble("pitch"),
-                            (float) plugin.getConfig().getDouble("yaw")));
-        });
 
+        arena.getArenaMembers().forEach(this::leaveGame);
+        Bukkit.getLogger().info("[QUAKECRAFT] The arena " + game.getArena().getName() + " is now available again!");
         games.remove(game);
     }
 
+    // giving each user their gun
+    private void giveGuns(final Arena arena) {
+        arena.getArenaMembers().forEach(quakePlayer -> {
+            final RailGun railGun = plugin.getRailGunManager().getRailGunFromPlayer(quakePlayer);
+            quakePlayer.getInventory().addItem(ItemUtils.createItem(railGun.getMaterial(), railGun.getName()));
+            quakePlayer.sendMessage("&aReceived your railgun: " + railGun.getName());
+        });
+    }
+
+    public void handleGameKill(final Game game, final QuakePlayer killer, final QuakePlayer killed) {
+        game.getArena().getArenaMembers().forEach(player -> player.sendMessage("&b" + killed.getName() + " &3was killed by &3" + killer.getName()));
+
+        killer.incrementKills();
+        killer.teleport(game.getArena().getSpawnLocations().get(new Random().nextInt(game.getArena().getSpawnLocations().size()))); // teleport to a randon location
+
+    }
+
+    // starting the lobby countdown, when it ends, players are teleported to spawns and the game starts
     private void startLobbyCountdown(final Game game) {
         final Arena arena = game.getArena();
         new BukkitRunnable() {
@@ -84,7 +99,7 @@ public class GameManager {
         }.runTaskTimer(plugin, 0L, 20L);
     }
 
-
+    // starting the game timer
     private void startGameTimer(final Game game) {
         final Arena arena = game.getArena();
 
@@ -102,6 +117,7 @@ public class GameManager {
         }.runTaskTimer(plugin, 0L, 20L);
     }
 
+    // method for handling game joins
     public void joinGame(final QuakePlayer quakePlayer, final Arena arena) {
         Game game = getGameByArena(arena);
         if (getGameByArena(arena) == null) {
@@ -111,9 +127,7 @@ public class GameManager {
 
         arena.addArenaMember(quakePlayer);
         quakePlayer.sendMessage("&aSuccessfully joined a game!");
-        arena.getArenaMembers().forEach(queueMember -> {
-            queueMember.sendMessage("&b" + queueMember.getName() + "&3 joined the game!");
-        });
+        arena.getArenaMembers().forEach(queueMember -> queueMember.sendMessage("&b" + queueMember.getName() + "&3 joined the game!"));
 
         quakePlayer.teleport(arena.getLobbyLocation());
 
@@ -121,25 +135,85 @@ public class GameManager {
             startLobbyCountdown(game); // start the lobby cd
         }
 
+        final Game finalGame = game;
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (quakePlayer.getPlayerState() != PlayerState.IN_QUAKE) {
+                    plugin.getQuakeScoreboard().gameScoreboard(quakePlayer.getBukkitPlayer(), finalGame);
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
+    // method for handling a game leave
     public void leaveGame(final QuakePlayer quakePlayer) {
         final Arena arena = plugin.getArenaManager().getArenaByPlayer(quakePlayer);
         if (arena == null) return;
+        System.out.println("Here");
 
-        arena.removeArenaMember(quakePlayer);
         quakePlayer.sendMessage("&aSuccessfully left the arena!");
+        quakePlayer.setPlayerState(PlayerState.IN_QUAKE); // resetting their state back to lobby
+        quakePlayer.clearFullInv(); // resetting their inventory, hunger and teleporting them back to the hub
+        quakePlayer.resetHunger();
+        quakePlayer.teleport(
+                new Location(Bukkit.getWorld(Objects.requireNonNull(plugin.getConfig().getString("spawn.world"))),
+                        plugin.getConfig().getDouble("spawn.x"),
+                        plugin.getConfig().getDouble("spawn.y"),
+                        plugin.getConfig().getDouble("spawn.z"),
+                        (float) plugin.getConfig().getDouble("spawn.pitch"),
+                        (float) plugin.getConfig().getDouble("spawn.yaw")));
 
+        quakePlayer.setKills(0); // reset their kills
+        plugin.getQuakeScoreboard().lobbyScoreboard(quakePlayer.getBukkitPlayer());
+        arena.removeArenaMember(quakePlayer); // remove them from the arena
     }
 
+    // get the game based of an arena
     private Game getGameByArena(final Arena arena) {
         return games.stream().filter(game -> game.getArena().equals(arena)).findFirst().orElse(null);
     }
 
+    // get the game a player is in, throws null if not in game
+    public Game getGameByPlayer(final QuakePlayer player) {
+        return games.stream().filter(game -> game.getArena().getArenaMembers().contains(player)).findFirst().orElse(null);
+    }
+
+    // teleport every player to a different spawn loc
     private void teleportToSpawn(final Arena arena) {
         final Queue<Location> remainingSpawns = new ArrayDeque<>(arena.getSpawnLocations());
         for (final QuakePlayer quakePlayer : arena.getArenaMembers()) {
             quakePlayer.teleport(remainingSpawns.poll());
         }
+    }
+
+    /**
+     * @param game:    the game we are sending the message to
+     * @param gameEnd: true -> message for game endings, false -> message for game start
+     */
+
+    private void sendGameMessage(final Game game, final boolean gameEnd) {
+        final QuakePlayer winner = Collections.max(game.getArena().getArenaMembers(), Comparator.comparingInt(QuakePlayer::getKills));
+        game.getArena().getArenaMembers().forEach(arenaMember -> {
+            if (gameEnd) {
+                arenaMember.sendCenteredMessage("&7-------------------------------------");
+                arenaMember.sendCenteredMessage("");
+                arenaMember.sendCenteredMessage("&c&lThe Game has ended!");
+                arenaMember.sendCenteredMessage("&bWinner");
+                arenaMember.sendCenteredMessage("&e#1 " + winner.getName() + " &7- " + winner.getKills());
+                arenaMember.sendCenteredMessage("");
+                arenaMember.sendCenteredMessage("&aEveryone will be warped out in 10 seconds!");
+                arenaMember.sendCenteredMessage("&7-------------------------------------");
+
+            } else {
+                arenaMember.sendCenteredMessage("&7-------------------------------------");
+                arenaMember.sendCenteredMessage("");
+                arenaMember.sendCenteredMessage("&a&lThe game has started!");
+                arenaMember.sendCenteredMessage("&a&lGood Luck!");
+                arenaMember.sendCenteredMessage("&bThe first player to get &3" + game.getArena().getMaxKills() + " &bkills wins!");
+                arenaMember.sendCenteredMessage("");
+                arenaMember.sendCenteredMessage("&7-------------------------------------");
+            }
+        });
     }
 }

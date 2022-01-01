@@ -9,7 +9,7 @@ public class Arena {
 
     private final String name;
     private ArenaState arenaState;
-    private int maxPlayers, minPlayers, gameTimer, lobbyCountdown;
+    private int maxPlayers, minPlayers, gameTimer, lobbyCountdown, maxKills;
     private final Set<QuakePlayer> arenaMembers;
     private final List<Location> spawnLocations;
     private Location lobbyLocation;
@@ -21,12 +21,13 @@ public class Arena {
         this.minPlayers = 2;
         this.gameTimer = 300;
         this.lobbyCountdown = 10;
+        this.maxKills = 50;
         this.arenaMembers = new HashSet<>();
         this.spawnLocations = new ArrayList<>();
     }
 
     public Arena(final String name, final int maxPlayers, final int minPlayers, final int gameTimer,
-                 final int lobbyCountdown, final List<Location> spawnLocations, final Location lobbyLocation) {
+                 final int lobbyCountdown, final List<Location> spawnLocations, final Location lobbyLocation, final int maxKills) {
         this.name = name;
         this.maxPlayers = maxPlayers;
         this.minPlayers = minPlayers;
@@ -36,6 +37,7 @@ public class Arena {
         this.arenaMembers = new HashSet<>();
         this.spawnLocations = spawnLocations;
         this.lobbyLocation = lobbyLocation;
+        this.maxKills = maxKills;
     }
 
 
@@ -115,6 +117,14 @@ public class Arena {
 
     public void decrementGameTimer() {
         this.gameTimer--;
+    }
+
+    public int getMaxKills() {
+        return maxKills;
+    }
+
+    public void setMaxKills(int maxKills) {
+        this.maxKills = maxKills;
     }
 
     @Override

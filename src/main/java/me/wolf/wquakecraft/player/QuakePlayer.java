@@ -1,10 +1,12 @@
 package me.wolf.wquakecraft.player;
 
+import me.wolf.wquakecraft.railgun.RailGun;
 import me.wolf.wquakecraft.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 
 import java.util.UUID;
 
@@ -13,18 +15,20 @@ public class QuakePlayer {
     private final UUID uuid;
     private int kills;
     private PlayerState playerState;
+    private RailGun railGun;
 
     public QuakePlayer(final UUID uuid) {
         this.uuid = uuid;
         this.kills = 0;
         this.playerState = PlayerState.IN_QUAKE;
+
     }
 
     public int getKills() {
         return kills;
     }
 
-    public void incrementKiller() {
+    public void incrementKills() {
         this.kills++;
     }
 
@@ -32,12 +36,21 @@ public class QuakePlayer {
         return Bukkit.getPlayer(uuid);
     }
 
+
     public String getName() {
         return getBukkitPlayer().getName();
     }
 
     public void sendCenteredMessage(final String msg) {
         Utils.sendCenteredMessage(getBukkitPlayer(), Utils.colorize(msg));
+    }
+
+    public RailGun getRailGun() {
+        return railGun;
+    }
+
+    public void setRailGun(RailGun railGun) {
+        this.railGun = railGun;
     }
 
     public void sendMessage(final String msg) {
@@ -94,6 +107,14 @@ public class QuakePlayer {
         getBukkitPlayer().getInventory().setChestplate(null);
         getBukkitPlayer().getInventory().setLeggings(null);
         getBukkitPlayer().getInventory().setBoots(null);
+    }
+
+    public void setKills(int kills) {
+        this.kills = kills;
+    }
+
+    public Inventory getInventory() {
+        return getBukkitPlayer().getInventory();
     }
 
     public boolean isInGame() {

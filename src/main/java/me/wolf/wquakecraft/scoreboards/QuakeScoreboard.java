@@ -2,6 +2,7 @@ package me.wolf.wquakecraft.scoreboards;
 
 import me.wolf.wquakecraft.QuakeCraftPlugin;
 import me.wolf.wquakecraft.game.Game;
+import me.wolf.wquakecraft.player.QuakePlayer;
 import me.wolf.wquakecraft.utils.Utils;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -18,6 +19,9 @@ public class QuakeScoreboard {
     }
 
     public void lobbyScoreboard(final Player player) {
+        final QuakePlayer quakePlayer = plugin.getPlayerManager().getQuakePlayer(player.getUniqueId());
+        final String activeGun = quakePlayer.getRailGun() == null ? Utils.colorize("&cNone") : quakePlayer.getRailGun().getName();
+
 
         final ScoreboardManager scoreboardManager = plugin.getServer().getScoreboardManager();
         org.bukkit.scoreboard.Scoreboard scoreboard = scoreboardManager.getNewScoreboard();
@@ -32,6 +36,11 @@ public class QuakeScoreboard {
         help.setSuffix(Utils.colorize("&a" + "/quake help"));
         objective.getScore(Utils.colorize("&7For Info: ")).setScore(1);
 
+        final Team gun = scoreboard.registerNewTeam("gun");
+        gun.addEntry(Utils.colorize("&bActive Railgun: "));
+        gun.setPrefix("");
+        gun.setSuffix(Utils.colorize(activeGun));
+        objective.getScore(Utils.colorize("&bActive Railgun: ")).setScore(2);
 
         player.setScoreboard(scoreboard);
     }
@@ -44,7 +53,7 @@ public class QuakeScoreboard {
 
         final Objective objective = scoreboard.registerNewObjective("quake", "quake");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(Utils.colorize("&c&lquake Game"));
+        objective.setDisplayName(Utils.colorize("&c&lQuake Game"));
 
         final Team time = scoreboard.registerNewTeam("time");
         time.addEntry(Utils.colorize("&bTime: "));
