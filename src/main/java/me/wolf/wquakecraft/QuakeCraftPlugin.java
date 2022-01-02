@@ -6,6 +6,7 @@ import me.wolf.wquakecraft.files.FileManager;
 import me.wolf.wquakecraft.game.GameManager;
 import me.wolf.wquakecraft.listeners.BlockBreak;
 import me.wolf.wquakecraft.listeners.BlockPlace;
+import me.wolf.wquakecraft.listeners.GameListeners;
 import me.wolf.wquakecraft.listeners.InventoryInteractions;
 import me.wolf.wquakecraft.player.PlayerManager;
 import me.wolf.wquakecraft.railgun.RailGunManager;
@@ -52,7 +53,8 @@ public class QuakeCraftPlugin extends JavaPlugin {
         Arrays.asList(
                 new BlockPlace(this),
                 new BlockBreak(this),
-                new InventoryInteractions(this)
+                new InventoryInteractions(this),
+                new GameListeners(this)
         ).forEach(listener -> Bukkit.getPluginManager().registerEvents(listener, this));
     }
 

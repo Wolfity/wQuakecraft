@@ -78,8 +78,9 @@ public class QuakeCommand extends BaseCommand {
                 }
                 player.sendMessage(Utils.colorize(stringBuilder.toString()));
             } else if (args[0].equalsIgnoreCase("leavearena")) {
-                if (!quakePlayer.isInGame()) {
+                if (quakePlayer.isInGame()) {
                     plugin.getGameManager().leaveGame(quakePlayer);
+                    plugin.getArenaManager().getArenaByPlayer(quakePlayer).removeArenaMember(quakePlayer);
                 } else tell("&cYou are not in a game!");
             }
         }

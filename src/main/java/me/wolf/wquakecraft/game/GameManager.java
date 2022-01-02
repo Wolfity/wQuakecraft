@@ -9,6 +9,7 @@ import me.wolf.wquakecraft.railgun.RailGun;
 import me.wolf.wquakecraft.utils.ItemUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
@@ -40,7 +41,6 @@ public class GameManager {
                 giveGuns(arena);
                 startGameTimer(game);
                 sendGameMessage(game, false);
-
                 break;
             case END:
                 arena.setArenaState(ArenaState.END);
@@ -58,8 +58,9 @@ public class GameManager {
         arena.setArenaState(ArenaState.READY);
         arena.setGameTimer(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".game-timer"));
 
-
         arena.getArenaMembers().forEach(this::leaveGame);
+        arena.getArenaMembers().clear();
+
         Bukkit.getLogger().info("[QUAKECRAFT] The arena " + game.getArena().getName() + " is now available again!");
         games.remove(game);
     }
@@ -75,16 +76,18 @@ public class GameManager {
 
     public void handleGameKill(final Game game, final QuakePlayer killer, final QuakePlayer killed) {
         game.getArena().getArenaMembers().forEach(player -> player.sendMessage("&b" + killed.getName() + " &3was killed by &3" + killer.getName()));
-
         killer.incrementKills();
-        killer.teleport(game.getArena().getSpawnLocations().get(new Random().nextInt(game.getArena().getSpawnLocations().size()))); // teleport to a randon location
+        killed.teleport(game.getArena().getSpawnLocations().get(new Random().nextInt(game.getArena().getSpawnLocations().size()))); // teleport to a randon location
 
+        if(killer.getKills() == game.getArena().getMaxKills()) { // if the max kills has been reached, end the game
+            setGameState(game, GameState.END);
+        }
     }
 
     // starting the lobby countdown, when it ends, players are teleported to spawns and the game starts
     private void startLobbyCountdown(final Game game) {
         final Arena arena = game.getArena();
-        new BukkitRunnable() {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> new BukkitRunnable() { // give players an additional 5 sec to join before they cant, then start countdown
             @Override
             public void run() {
                 if (arena.getLobbyCountdown() > 0) {
@@ -96,7 +99,8 @@ public class GameManager {
                     setGameState(game, GameState.INGAME); // lobby countdown ended
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L);
+        }.runTaskTimer(plugin, 0L, 20L), 100L);
+
     }
 
     // starting the game timer
@@ -108,7 +112,7 @@ public class GameManager {
             public void run() {
                 if (arena.getGameTimer() > 0) {
                     arena.decrementGameTimer();
-                } else {
+                } else { // gametimer runs out, end the game
                     this.cancel();
                     arena.setGameTimer(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".game-timer"));
                     setGameState(game, GameState.END);
@@ -119,17 +123,19 @@ public class GameManager {
 
     // method for handling game joins
     public void joinGame(final QuakePlayer quakePlayer, final Arena arena) {
-        Game game = getGameByArena(arena);
-        if (getGameByArena(arena) == null) {
+        quakePlayer.setPlayerState(PlayerState.IN_PREGAME);
+
+        Game game = getGameByArena(arena); // checing if there is a game active from the arena the user wants to play in
+        if (getGameByArena(arena) == null) { // if there is none, create a new one
             game = new Game(arena);
         }
         games.add(game);
 
         arena.addArenaMember(quakePlayer);
-        quakePlayer.sendMessage("&aSuccessfully joined a game!");
+        quakePlayer.sendMessage("&aSuccessfully joined a game!"); // send a message to all current players
         arena.getArenaMembers().forEach(queueMember -> queueMember.sendMessage("&b" + queueMember.getName() + "&3 joined the game!"));
 
-        quakePlayer.teleport(arena.getLobbyLocation());
+        quakePlayer.teleport(arena.getLobbyLocation()); // teleport to lobby
 
         if (arena.getArenaMembers().size() >= arena.getMinPlayers()) { // more or equals the required amount of players are in
             startLobbyCountdown(game); // start the lobby cd
@@ -150,13 +156,12 @@ public class GameManager {
     public void leaveGame(final QuakePlayer quakePlayer) {
         final Arena arena = plugin.getArenaManager().getArenaByPlayer(quakePlayer);
         if (arena == null) return;
-        System.out.println("Here");
 
         quakePlayer.sendMessage("&aSuccessfully left the arena!");
         quakePlayer.setPlayerState(PlayerState.IN_QUAKE); // resetting their state back to lobby
         quakePlayer.clearFullInv(); // resetting their inventory, hunger and teleporting them back to the hub
         quakePlayer.resetHunger();
-        quakePlayer.teleport(
+        quakePlayer.teleport( // teleport to the quake spawn
                 new Location(Bukkit.getWorld(Objects.requireNonNull(plugin.getConfig().getString("spawn.world"))),
                         plugin.getConfig().getDouble("spawn.x"),
                         plugin.getConfig().getDouble("spawn.y"),
@@ -166,7 +171,7 @@ public class GameManager {
 
         quakePlayer.setKills(0); // reset their kills
         plugin.getQuakeScoreboard().lobbyScoreboard(quakePlayer.getBukkitPlayer());
-        arena.removeArenaMember(quakePlayer); // remove them from the arena
+         // remove them from the arena
     }
 
     // get the game based of an arena
@@ -214,6 +219,7 @@ public class GameManager {
                 arenaMember.sendCenteredMessage("");
                 arenaMember.sendCenteredMessage("&7-------------------------------------");
             }
+            arenaMember.getBukkitPlayer().playSound(arenaMember.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.5F, 0.5F);
         });
     }
 }
