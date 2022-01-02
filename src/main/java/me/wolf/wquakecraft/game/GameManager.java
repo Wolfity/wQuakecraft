@@ -5,11 +5,15 @@ import me.wolf.wquakecraft.arena.Arena;
 import me.wolf.wquakecraft.arena.ArenaState;
 import me.wolf.wquakecraft.player.PlayerState;
 import me.wolf.wquakecraft.player.QuakePlayer;
+import me.wolf.wquakecraft.powerups.PowerUp;
 import me.wolf.wquakecraft.railgun.RailGun;
 import me.wolf.wquakecraft.utils.ItemUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
@@ -58,10 +62,19 @@ public class GameManager {
         arena.setArenaState(ArenaState.READY);
         arena.setGameTimer(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".game-timer"));
 
-        arena.getArenaMembers().forEach(this::leaveGame);
+        arena.getArenaMembers().forEach(player -> {
+            leaveGame(player); // leave the game + give the rail gun selector back
+            player.getInventory().setItem(0, ItemUtils.createItem(Material.WOODEN_HOE, "&cChoose a Rail Gun"));
+        });
+
         arena.getArenaMembers().clear();
 
+        // clearing all possible leftover powerups
+        arena.getPowerupLocations().forEach(location -> Arrays.stream(location.getChunk().getEntities())
+                .filter(entity -> entity instanceof Item).forEach(Entity::remove));
+
         Bukkit.getLogger().info("[QUAKECRAFT] The arena " + game.getArena().getName() + " is now available again!");
+
         games.remove(game);
     }
 
@@ -70,7 +83,7 @@ public class GameManager {
         arena.getArenaMembers().forEach(quakePlayer -> {
             final RailGun railGun = plugin.getRailGunManager().getRailGunFromPlayer(quakePlayer);
             quakePlayer.getInventory().addItem(ItemUtils.createItem(railGun.getMaterial(), railGun.getName()));
-            quakePlayer.sendMessage("&aReceived your railgun: " + railGun.getName());
+            quakePlayer.sendMessage("&aReceived your Rail Gun: " + railGun.getName());
         });
     }
 
@@ -79,7 +92,19 @@ public class GameManager {
         killer.incrementKills();
         killed.teleport(game.getArena().getSpawnLocations().get(new Random().nextInt(game.getArena().getSpawnLocations().size()))); // teleport to a randon location
 
-        if(killer.getKills() == game.getArena().getMaxKills()) { // if the max kills has been reached, end the game
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (killed.getSpawnProtection() > 0) {
+                    killed.decrementSpawnProtection();
+                } else {
+                    this.cancel();
+                    killed.setSpawnProtection(5); // 5 seconds of spawn prot
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+
+        if (killer.getKills() == game.getArena().getMaxKills()) { // if the max kills has been reached, end the game
             setGameState(game, GameState.END);
         }
     }
@@ -96,7 +121,9 @@ public class GameManager {
                 } else {
                     this.cancel();
                     arena.setLobbyCountdown(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".lobby-countdown"));
+                    arena.getArenaMembers().forEach(quakPlayer -> quakPlayer.getInventory().clear()); // clear inv before giving railgun
                     setGameState(game, GameState.INGAME); // lobby countdown ended
+
                 }
             }
         }.runTaskTimer(plugin, 0L, 20L), 100L);
@@ -110,15 +137,38 @@ public class GameManager {
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (arena.getGameTimer() > 0) {
-                    arena.decrementGameTimer();
-                } else { // gametimer runs out, end the game
-                    this.cancel();
-                    arena.setGameTimer(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".game-timer"));
-                    setGameState(game, GameState.END);
+                if (game.getGameState() == GameState.INGAME) { // only run when the game is live
+                    if (arena.getGameTimer() > 0) {
+                        arena.decrementGameTimer();
+
+                        if (arena.getPowerupSpawn() > 0) { // run the powerup spawn timer until the game ends.
+                            arena.decrementPowerUpTimer();
+                        } else {
+                            spawnPowerUp(arena); // spawning the powerup
+                            // restarting the timer
+                            arena.setPowerupSpawn(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".powerup-spawn-time"));
+                        }
+
+                    } else { // gametimer runs out, end the game
+                        this.cancel();
+                        arena.setGameTimer(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".game-timer"));
+                        // resetting the arena's power up spawn timer for the next game
+                        arena.setPowerupSpawn(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".powerup-spawn-time"));
+                        setGameState(game, GameState.END);
+                    }
                 }
             }
         }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private void spawnPowerUp(final Arena arena) {
+        final int randomSpawn = new Random().nextInt(arena.getPowerupLocations().size() - 1);
+        final int randomPowerUp = new Random().nextInt(plugin.getPowerUpManager().getPowerUps().size() - 1);
+
+        final PowerUp powerUp = new ArrayList<>(plugin.getPowerUpManager().getPowerUps()).get(randomPowerUp);
+
+        arena.getSpawnLocations().get(0).getWorld().dropItem(arena.getPowerupLocations().get(randomSpawn), powerUp.getIcon());
+        arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.sendMessage("&3[!] &bA Power Up has been spawned! Walk over it to use it"));
     }
 
     // method for handling game joins
@@ -133,11 +183,11 @@ public class GameManager {
 
         arena.addArenaMember(quakePlayer);
         quakePlayer.sendMessage("&aSuccessfully joined a game!"); // send a message to all current players
-        arena.getArenaMembers().forEach(queueMember -> queueMember.sendMessage("&b" + queueMember.getName() + "&3 joined the game!"));
+        arena.getArenaMembers().forEach(queueMember -> queueMember.sendMessage("&b" + quakePlayer.getName() + "&3 joined the game!"));
 
         quakePlayer.teleport(arena.getLobbyLocation()); // teleport to lobby
 
-        if (arena.getArenaMembers().size() >= arena.getMinPlayers()) { // more or equals the required amount of players are in
+        if (arena.getArenaMembers().size() == arena.getMinPlayers()) { // more or equals the required amount of players are in
             startLobbyCountdown(game); // start the lobby cd
         }
 
@@ -171,7 +221,7 @@ public class GameManager {
 
         quakePlayer.setKills(0); // reset their kills
         plugin.getQuakeScoreboard().lobbyScoreboard(quakePlayer.getBukkitPlayer());
-         // remove them from the arena
+        // remove them from the arena
     }
 
     // get the game based of an arena
@@ -221,5 +271,9 @@ public class GameManager {
             }
             arenaMember.getBukkitPlayer().playSound(arenaMember.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.5F, 0.5F);
         });
+    }
+
+    public Set<Game> getGames() {
+        return games;
     }
 }

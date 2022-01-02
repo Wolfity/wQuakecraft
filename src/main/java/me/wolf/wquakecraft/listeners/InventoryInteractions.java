@@ -1,6 +1,7 @@
 package me.wolf.wquakecraft.listeners;
 
 import me.wolf.wquakecraft.QuakeCraftPlugin;
+import me.wolf.wquakecraft.player.PlayerState;
 import me.wolf.wquakecraft.player.QuakePlayer;
 import me.wolf.wquakecraft.railgun.RailGun;
 import me.wolf.wquakecraft.utils.ItemUtils;
@@ -65,7 +66,8 @@ public class InventoryInteractions implements Listener {
 
     @EventHandler
     public void onPickup(PlayerPickupItemEvent event) {
-        event.setCancelled(plugin.getPlayerManager().getQuakePlayer(event.getPlayer().getUniqueId()) != null);
+        final QuakePlayer player = plugin.getPlayerManager().getQuakePlayer(event.getPlayer().getUniqueId());
+        event.setCancelled(player != null && player.getPlayerState() != PlayerState.IN_GAME);
     }
 
     // players cant move items in their inventory whilst ingame

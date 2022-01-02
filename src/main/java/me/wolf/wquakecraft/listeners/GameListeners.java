@@ -7,14 +7,18 @@ import me.wolf.wquakecraft.player.PlayerState;
 import me.wolf.wquakecraft.player.QuakePlayer;
 import me.wolf.wquakecraft.railgun.RailGun;
 import me.wolf.wquakecraft.utils.ItemUtils;
+import net.minecraft.network.protocol.game.PacketPlayOutEntityDestroy;
+import org.bukkit.Bukkit;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowball;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
@@ -53,37 +57,58 @@ public class GameListeners implements Listener {
         final Player shooter = (Player) ((Snowball) event.getDamager()).getShooter();
         if (shooter == null) return;
 
-        QuakePlayer killer = plugin.getPlayerManager().getQuakePlayer(shooter.getUniqueId());
+        final QuakePlayer killer = plugin.getPlayerManager().getQuakePlayer(shooter.getUniqueId());
         if (killer == null || killed == null) return;
         final Game game = plugin.getGameManager().getGameByPlayer(killer); // get the game the players are in
+
         if (game.getGameState() != GameState.INGAME)
             return; // if the game isn't actually live, don't allow the hit to do anything
 
-        plugin.getGameManager().handleGameKill(game, killer, killed);
-
+        if (killed.getSpawnProtection() == 5) {
+            plugin.getGameManager().handleGameKill(game, killer, killed);
+        }
         event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onPowerUpPickUp(PlayerPickupItemEvent event) {
+        final QuakePlayer player = plugin.getPlayerManager().getQuakePlayer(event.getPlayer().getUniqueId());
+        if (player == null)
+            return; // allowing to pickup items when in PlayerState.IN_GAME is handled in the InventoryInteractions class
+
+        plugin.getPowerUpManager().getPowerUps().forEach(powerUp -> {
+            if (event.getItem().getItemStack().equals(powerUp.getIcon())) {
+                powerUp.startPowerUp(player);
+                player.sendMessage("&bSuccessfully activated the &2" + powerUp.getName() + " &bPower Up&b for &2" + powerUp.getFinalDuration() + " &bseconds!");
+                Bukkit.getScheduler().runTaskLater(plugin, () -> player.getInventory().removeItem(powerUp.getIcon()), 2L);
+            }
+        });
+
     }
 
     private boolean canShoot(final QuakePlayer player) {
         final RailGun railGun = player.getRailGun();
         // player shot a bullet
-        if(!cooldownMap.containsKey(player)) { // check if the player is not on cooldown (bullet shot)
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    if (railGun.getFireRate() > 0) {  // start the cooldown timer, player can not shoot during this
-                        cooldownMap.put(player, (long) railGun.getFireRate()); // put them in the cooldown map
-                        railGun.decrementCooldown();
-                    } else { // cooldown is over, player can shoot again
-                        this.cancel(); // reset the fire-rate and remove from map
-                        railGun.setFireRate(plugin.getFileManager().getRailGunsConfig().getConfig().getDouble("railguns." + railGun.getIdentifier() + ".fire-rate"));
-                        cooldownMap.remove(player);
+        if (player.hasShootingCooldown()) { // check if they can bypass the cooldown or not
+            if (!cooldownMap.containsKey(player)) { // check if the player is not on cooldown (bullet shot)
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (railGun.getFireRate() > 0) {  // start the cooldown timer, player can not shoot during this
+                            cooldownMap.put(player, (long) railGun.getFireRate()); // put them in the cooldown map
+                            railGun.decrementCooldown();
+                        } else { // cooldown is over, player can shoot again
+                            this.cancel(); // reset the fire-rate and remove from map
+                            railGun.setFireRate(plugin.getFileManager().getRailGunsConfig().getConfig().getDouble("railguns." + railGun.getIdentifier() + ".fire-rate"));
+                            cooldownMap.remove(player);
+                        }
                     }
-                }
-            }.runTaskTimer(plugin, 0L, 1L);
+                }.runTaskTimer(plugin, 0L, 1L);
 
+            }
+            return !cooldownMap.containsKey(player); // return whether the player is on cooldown or not
         }
-        return !cooldownMap.containsKey(player); // return whether the player is on cooldown or not
+        return true; // if the player has the bypass permission (hasshootingcooldown = true) they can shoot all the time
     }
 
 
@@ -105,11 +130,10 @@ public class GameListeners implements Listener {
             }
         }.runTaskTimer(plugin, 0L, 1L);
 
-//                    final PacketPlayOutEntityDestroy destroyPacket = new PacketPlayOutEntityDestroy(bullet.getEntityId()); // destroying the snowball entity so it looks invisible
-//                    ((CraftPlayer) shooter.getBukkitPlayer()).getHandle().b.sendPacket(destroyPacket);
+        final PacketPlayOutEntityDestroy destroyPacket = new PacketPlayOutEntityDestroy(bullet.getEntityId()); // destroying the snowball entity so it looks invisible
+        ((CraftPlayer) shooter.getBukkitPlayer()).getHandle().b.sendPacket(destroyPacket);
         shooter.getBukkitPlayer().playSound(shooter.getLocation(), Sound.ENTITY_SNOW_GOLEM_SHOOT, 0.8F, 0.8F);
         gun.setFireRate(plugin.getFileManager().getRailGunsConfig().getConfig().getDouble("railguns." + gun.getIdentifier() + ".fire-rate"));
     }
-
 
 }

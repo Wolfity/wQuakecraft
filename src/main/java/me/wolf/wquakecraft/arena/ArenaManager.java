@@ -26,6 +26,7 @@ public class ArenaManager {
         cfg.getConfig().set("arenas." + name + ".lobby-countdown", arena.getLobbyCountdown());
         cfg.getConfig().set("arenas." + name + ".game-timer", arena.getGameTimer());
         cfg.getConfig().set("arenas." + name + ".max-kills", arena.getMaxKills());
+        cfg.getConfig().set("arenas." + name + ".powerup-spawn-time", arena.getPowerupSpawn());
         cfg.saveConfig();
 
         arenas.add(arena);
@@ -35,11 +36,14 @@ public class ArenaManager {
         try { // arenas must be fully setup in order to load them correctly after a restart
             for (final String arenaName : cfg.getConfig().getConfigurationSection("arenas").getKeys(false)) {
                 final List<Location> spawnLocations = new ArrayList<>();
+                final List<Location> powerupLocations = new ArrayList<>();
+
                 final int maxPlayers = cfg.getConfig().getInt("arenas." + arenaName + ".max-players");
                 final int minPlayers = cfg.getConfig().getInt("arenas." + arenaName + ".min-players");
                 final int lobbyCountdown = cfg.getConfig().getInt("arenas." + arenaName + ".lobby-countdown");
                 final int gameTimer = cfg.getConfig().getInt("arenas." + arenaName + ".game-timer");
                 final int maxKills = cfg.getConfig().getInt("arenas." + arenaName + ".max-kills");
+                final int powerupSpawn = cfg.getConfig().getInt("arenas." + arenaName + ".powerup-spawn-time");
 
                 final Location lobbyLoc = new Location(Bukkit.getWorld(Objects.requireNonNull(
                         cfg.getConfig().getString("arenas." + arenaName + ".lobby-world"))),
@@ -51,7 +55,8 @@ public class ArenaManager {
 
                 // we are not allowing more spawns then players.
                 for (int i = 1; i < maxPlayers + 1; i++) {
-                    spawnLocations.add(new Location(Bukkit.getWorld(Objects.requireNonNull(cfg.getConfig().getString("arenas." + arenaName + ".spawns." + i + ".world"))),
+                    spawnLocations.add(new Location(
+                            Bukkit.getWorld(Objects.requireNonNull(cfg.getConfig().getString("arenas." + arenaName + ".spawns." + i + ".world"))),
                             cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".x"),
                             cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".y"),
                             cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".z"),
@@ -59,7 +64,25 @@ public class ArenaManager {
                             (float) cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".pitch")));
                 }
 
-                arenas.add(new Arena(arenaName, maxPlayers, minPlayers, gameTimer, lobbyCountdown, spawnLocations, lobbyLoc, maxKills));
+                for (final String loc : cfg.getConfig().getConfigurationSection("arenas." + arenaName + ".powerups").getKeys(false)) {
+                    powerupLocations.add(
+                            new Location(Bukkit.getWorld(Objects.requireNonNull(cfg.getConfig().getString("arenas." + arenaName + ".powerups." + loc + ".powerup-world"))),
+                                    cfg.getConfig().getDouble("arenas." + arenaName + ".powerups." + loc + ".powerup-x"),
+                                    cfg.getConfig().getDouble("arenas." + arenaName + ".powerups." + loc + ".powerup-y"),
+                                    cfg.getConfig().getDouble("arenas." + arenaName + ".powerups." + loc + ".powerup-z")));
+                }
+
+                arenas.add(new Arena(arenaName)
+                        .setMaxPlayers(maxPlayers)
+                        .setMinPlayers(minPlayers)
+                        .setGameTimer(gameTimer)
+                        .setLobbyCountdown(lobbyCountdown)
+                        .setSpawnLocations(spawnLocations)
+                        .setLobbyLocation(lobbyLoc)
+                        .setMaxKills(maxKills)
+                        .setPowerupLocations(powerupLocations)
+                        .setPowerupSpawn(powerupSpawn));
+
                 Bukkit.getLogger().info("[QUAKECRAFT] SUCCESSFULLY LOADED THE ARENA:  " + arenaName);
             }
         } catch (final NullPointerException e) {

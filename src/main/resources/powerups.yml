@@ -1,0 +1,9 @@
+powerups:
+  speed:
+    enabled: true
+    duration: 10
+    icon: SUGAR
+  machinegun:
+    enabled: true
+    duration: 10
+    icon: DIAMOND_HOE

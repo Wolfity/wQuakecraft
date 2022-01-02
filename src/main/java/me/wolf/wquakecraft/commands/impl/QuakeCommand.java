@@ -46,6 +46,7 @@ public class QuakeCommand extends BaseCommand {
                             "&b/quake createarena <name> &7- Create an arena \n" +
                             "&b/quake removearena <name> &7- Remove an arena \n" +
                             "&b/quake addspawn <name> &7- Add an arena spawn to the arena\n" +
+                            "&b/quake addpowerupspawn <name> &7- Add a spot where a powerup can spawn" +
                             "[--------------------------------------]");
                 } else if (args[0].equalsIgnoreCase("sethub")) {
                     tell("&aSuccessfully set the Quake Hub!");
@@ -119,7 +120,10 @@ public class QuakeCommand extends BaseCommand {
                     if (isAdmin()) {
                         setLobby(quakePlayer, arenaName, plugin.getFileManager().getArenasConfigFile());
                     }
-
+                } else if (args[0].equalsIgnoreCase("addpowerupspawn")) {
+                    if(isAdmin()) {
+                        addPowerupSpawn(quakePlayer, arenaName, plugin.getFileManager().getArenasConfigFile());
+                    }
                 }
             } else tell("&cYou need to be in Quakecraft in order to execute this command!");
         }
@@ -178,6 +182,20 @@ public class QuakeCommand extends BaseCommand {
         plugin.getConfig().set("spawn.pitch", location.getPitch());
         plugin.getConfig().set("spawn.yaw", location.getY());
         plugin.saveConfig();
+    }
+
+    private void addPowerupSpawn(final QuakePlayer player, final String name, final YamlConfig cfg) {
+        final Arena arena = plugin.getArenaManager().getArenaByName(name);
+        if (arena != null) {
+            cfg.getConfig().set("arenas." + name + ".powerups." + arena.getPowerupLocations().size() + ".powerup-world", player.getWorld().getName());
+            cfg.getConfig().set("arenas." + name + ".powerups." + arena.getPowerupLocations().size() + ".powerup-x", player.getX());
+            cfg.getConfig().set("arenas." + name + ".powerups." + arena.getPowerupLocations().size() + ".powerup-y", player.getY());
+            cfg.getConfig().set("arenas." + name + ".powerups." + arena.getPowerupLocations().size() + ".powerup-z", player.getZ());
+            cfg.saveConfig();
+            arena.addPowerupLocation(player.getLocation());
+            player.sendMessage("&aSuccessfully added a powerup spawn for &2" + name);
+
+        } else player.sendMessage("&cThis arena does not exist!");
     }
 
 }

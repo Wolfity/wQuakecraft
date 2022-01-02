@@ -13,15 +13,17 @@ import java.util.UUID;
 public class QuakePlayer {
 
     private final UUID uuid;
-    private int kills;
+    private int kills, spawnProtection;
     private PlayerState playerState;
     private RailGun railGun;
+    private boolean hasShootingCooldown;
 
     public QuakePlayer(final UUID uuid) {
         this.uuid = uuid;
         this.kills = 0;
         this.playerState = PlayerState.IN_QUAKE;
-
+        this.spawnProtection = 5;
+        this.hasShootingCooldown = true;
     }
 
     public int getKills() {
@@ -119,6 +121,26 @@ public class QuakePlayer {
 
     public boolean isInGame() {
         return playerState == PlayerState.IN_GAME;
+    }
+
+    public int getSpawnProtection() {
+        return spawnProtection;
+    }
+
+    public void decrementSpawnProtection() {
+        this.spawnProtection--;
+    }
+
+    public void setHasShootingCooldown(boolean hasShootingCooldown) {
+        this.hasShootingCooldown = hasShootingCooldown;
+    }
+
+    public boolean hasShootingCooldown() {
+        return hasShootingCooldown;
+    }
+
+    public void setSpawnProtection(int spawnProtection) {
+        this.spawnProtection = spawnProtection;
     }
 
     public UUID getUuid() {

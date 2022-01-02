@@ -4,11 +4,9 @@ import me.wolf.wquakecraft.arena.ArenaManager;
 import me.wolf.wquakecraft.commands.impl.QuakeCommand;
 import me.wolf.wquakecraft.files.FileManager;
 import me.wolf.wquakecraft.game.GameManager;
-import me.wolf.wquakecraft.listeners.BlockBreak;
-import me.wolf.wquakecraft.listeners.BlockPlace;
-import me.wolf.wquakecraft.listeners.GameListeners;
-import me.wolf.wquakecraft.listeners.InventoryInteractions;
+import me.wolf.wquakecraft.listeners.*;
 import me.wolf.wquakecraft.player.PlayerManager;
+import me.wolf.wquakecraft.powerups.PowerUpManager;
 import me.wolf.wquakecraft.railgun.RailGunManager;
 import me.wolf.wquakecraft.scoreboards.QuakeScoreboard;
 import org.bukkit.Bukkit;
@@ -28,10 +26,10 @@ public class QuakeCraftPlugin extends JavaPlugin {
     private GameManager gameManager;
     private QuakeScoreboard quakeScoreboard;
     private RailGunManager railGunManager;
+    private PowerUpManager powerUpManager;
 
     @Override
     public void onEnable() {
-
 
         this.getConfig().options().copyDefaults();
         saveDefaultConfig();
@@ -39,6 +37,7 @@ public class QuakeCraftPlugin extends JavaPlugin {
         registerManagers();
         registerCommands();
         registerListeners();
+
 
     }
 
@@ -54,7 +53,8 @@ public class QuakeCraftPlugin extends JavaPlugin {
                 new BlockPlace(this),
                 new BlockBreak(this),
                 new InventoryInteractions(this),
-                new GameListeners(this)
+                new GameListeners(this),
+                new PlayerQuit(this)
         ).forEach(listener -> Bukkit.getPluginManager().registerEvents(listener, this));
     }
 
@@ -78,7 +78,9 @@ public class QuakeCraftPlugin extends JavaPlugin {
         this.gameManager = new GameManager(this);
         this.quakeScoreboard = new QuakeScoreboard(this);
         this.railGunManager = new RailGunManager();
+        this.powerUpManager = new PowerUpManager();
 
+        powerUpManager.loadPowerUps(this);
         railGunManager.loadRailGuns(fileManager.getRailGunsConfig());
         arenaManager.loadArenas();
     }
@@ -105,5 +107,9 @@ public class QuakeCraftPlugin extends JavaPlugin {
 
     public RailGunManager getRailGunManager() {
         return railGunManager;
+    }
+
+    public PowerUpManager getPowerUpManager() {
+        return powerUpManager;
     }
 }
