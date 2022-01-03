@@ -30,6 +30,10 @@ public class QuakePlayer {
         return kills;
     }
 
+    public void setKills(int kills) {
+        this.kills = kills;
+    }
+
     public void incrementKills() {
         this.kills++;
     }
@@ -37,7 +41,6 @@ public class QuakePlayer {
     public Player getBukkitPlayer() {
         return Bukkit.getPlayer(uuid);
     }
-
 
     public String getName() {
         return getBukkitPlayer().getName();
@@ -111,20 +114,20 @@ public class QuakePlayer {
         getBukkitPlayer().getInventory().setBoots(null);
     }
 
-    public void setKills(int kills) {
-        this.kills = kills;
-    }
-
     public Inventory getInventory() {
         return getBukkitPlayer().getInventory();
     }
 
     public boolean isInGame() {
-        return playerState == PlayerState.IN_GAME;
+        return playerState == PlayerState.IN_GAME || playerState == PlayerState.IN_PREGAME;
     }
 
     public int getSpawnProtection() {
         return spawnProtection;
+    }
+
+    public void setSpawnProtection(int spawnProtection) {
+        this.spawnProtection = spawnProtection;
     }
 
     public void decrementSpawnProtection() {
@@ -137,10 +140,6 @@ public class QuakePlayer {
 
     public boolean hasShootingCooldown() {
         return hasShootingCooldown;
-    }
-
-    public void setSpawnProtection(int spawnProtection) {
-        this.spawnProtection = spawnProtection;
     }
 
     public UUID getUuid() {

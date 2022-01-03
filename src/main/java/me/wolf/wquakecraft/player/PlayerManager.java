@@ -1,6 +1,8 @@
 package me.wolf.wquakecraft.player;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class PlayerManager {
 
@@ -11,6 +13,7 @@ public class PlayerManager {
         quakePlayers.put(uuid, new QuakePlayer(uuid));
 
     }
+
     public void removeQuakePlayer(final UUID uuid) {
         quakePlayers.remove(uuid);
     }

@@ -33,8 +33,8 @@ public class InventoryInteractions implements Listener {
 
     @EventHandler
     public void onRailGunSelector(PlayerInteractEvent event) {
-        if(plugin.getPlayerManager().getQuakePlayer(event.getPlayer().getUniqueId()) == null) return;
-        if(event.getMaterial() == Material.WOODEN_HOE) {
+        if (plugin.getPlayerManager().getQuakePlayer(event.getPlayer().getUniqueId()) == null) return;
+        if (event.getMaterial() == Material.WOODEN_HOE) {
             openRailGunSelector(event.getPlayer());
 
         }
@@ -42,15 +42,15 @@ public class InventoryInteractions implements Listener {
 
     @EventHandler
     public void selectRailGun(InventoryClickEvent event) {
-        if(event.getClickedInventory() == null) return;
-        if(event.getCurrentItem() == null) return;
-        if(event.getCurrentItem().getItemMeta() == null) return;
+        if (event.getClickedInventory() == null) return;
+        if (event.getCurrentItem() == null) return;
+        if (event.getCurrentItem().getItemMeta() == null) return;
 
         final QuakePlayer player = plugin.getPlayerManager().getQuakePlayer(event.getWhoClicked().getUniqueId());
-        if(player == null) return;
+        if (player == null) return;
 
         plugin.getRailGunManager().getRailGuns().forEach(railGun -> {
-            if(event.getCurrentItem().equals(ItemUtils.createItem(railGun.getMaterial(), railGun.getName()))) {
+            if (event.getCurrentItem().equals(ItemUtils.createItem(railGun.getMaterial(), railGun.getName()))) {
                 player.setRailGun(railGun);
                 player.sendMessage("&aSuccessfully selected " + railGun.getName() + "&a!");
                 plugin.getQuakeScoreboard().lobbyScoreboard(player.getBukkitPlayer()); // update the scoreboard
@@ -91,7 +91,7 @@ public class InventoryInteractions implements Listener {
     private void openRailGunSelector(final Player player) {
         final Inventory selector = Bukkit.createInventory(null, 9, Utils.colorize("&cRailgun Selector"));
 
-        for(final RailGun railGun : plugin.getRailGunManager().getSortedGuns()) {
+        for (final RailGun railGun : plugin.getRailGunManager().getSortedGuns()) {
             selector.addItem(ItemUtils.createItem(railGun.getMaterial(), railGun.getName()));
         }
         player.openInventory(selector);

@@ -21,25 +21,25 @@ import java.util.*;
 public class GameManager {
 
     private final QuakeCraftPlugin plugin;
+    private final Set<Game> games = new HashSet<>();
 
     public GameManager(final QuakeCraftPlugin plugin) {
         this.plugin = plugin;
     }
 
-    private final Set<Game> games = new HashSet<>();
-
     // handling every specific game event based on the game state
     public void setGameState(final Game game, final GameState gameState) {
-        final Arena arena = game.getArena();
+        final Arena arena = game.getArena(); // no need to add lobby countdown, since the only use is for checking whether the countdown should continue or not
+        game.setGameState(gameState);
         switch (gameState) {
             case PREGAME: // Set to pregame once the lobbyCountdown starts
                 arena.setArenaState(ArenaState.PREGAME);
-                game.setGameState(gameState);
+
                 arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.setPlayerState(PlayerState.IN_PREGAME));
                 break;
             case INGAME:
                 arena.setArenaState(ArenaState.INGAME);
-                game.setGameState(gameState);
+
                 arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.setPlayerState(PlayerState.IN_GAME));
                 teleportToSpawn(arena);
                 giveGuns(arena);
@@ -48,7 +48,7 @@ public class GameManager {
                 break;
             case END:
                 arena.setArenaState(ArenaState.END);
-                game.setGameState(gameState);
+
                 arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.setPlayerState(PlayerState.IN_GAME));
                 sendGameMessage(game, true);
                 Bukkit.getScheduler().runTaskLater(plugin, () -> cleanupGame(game), 200L); // give 200 sec before cleaning up
@@ -114,7 +114,7 @@ public class GameManager {
 
     /**
      * @param quakePlayer: The player we are removing from the game and teleporting
-     * @param cleanUp: whether it is for the game cleanup, or an individual player leaving
+     * @param cleanUp:     whether it is for the game cleanup, or an individual player leaving
      */
     public void leaveGame(final QuakePlayer quakePlayer, final boolean cleanUp) {
         final Arena arena = plugin.getArenaManager().getArenaByPlayer(quakePlayer);
@@ -140,14 +140,19 @@ public class GameManager {
 
         plugin.getQuakeScoreboard().lobbyScoreboard(quakePlayer.getBukkitPlayer());
 
-        System.out.println("playerstate " + quakePlayer.getPlayerState());
-        System.out.println("game " + getGameByPlayer(quakePlayer));
+        if (arena.getArenaMembers().size() <= 1) { //
+            if (arena.getArenaState() == ArenaState.INGAME || arena.getArenaMembers().size() == 0) { // if it's in a lobby, or no players are in queue anymore, just cancel the countdown
+                setGameState(getGameByArena(arena), GameState.END);
 
-        if (arena.getArenaMembers().size() <= 1) { // - 1 because the quake player gets removed after this method
-            setGameState(getGameByArena(arena), GameState.END);
+            } else if (arena.getArenaMembers().size() < arena.getMinPlayers()) { // if a user leaves, and there are less players then the required, cancel countdown
+                arena.getArenaMembers().forEach(member -> member.sendMessage("&cThere are not enough players, countdown stopped!"));
+                getGameByArena(arena).setGameState(GameState.PREGAME); // set it back to before countdown
+                arena.setLobbyCountdown(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".lobby-countdown"));
+            }
         }
 
     }
+
 
     // get the game a player is in, throws null if not in game
     public Game getGameByPlayer(final QuakePlayer player) {
@@ -157,18 +162,21 @@ public class GameManager {
     // starting the lobby countdown, when it ends, players are teleported to spawns and the game starts
     private void startLobbyCountdown(final Game game) {
         final Arena arena = game.getArena();
+
         Bukkit.getScheduler().runTaskLater(plugin, () -> new BukkitRunnable() { // give players an additional 5 sec to join before they cant, then start countdown
             @Override
             public void run() {
-                if (arena.getLobbyCountdown() > 0) {
-                    arena.decrementLobbyCountdown();
-                    arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.sendMessage("&bThe game will start in &3" + arena.getLobbyCountdown() + "&b second(s)!"));
-                } else {
-                    this.cancel();
-                    arena.setLobbyCountdown(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".lobby-countdown"));
-                    arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.getInventory().clear()); // clear inv before giving railgun
-                    setGameState(game, GameState.INGAME); // lobby countdown ended
-
+                if (game.getGameState() == GameState.LOBBY_COUNTDOWN) {
+                    // if the last player in the game leaves, game will be in the end state, and countdown wont continue anymore
+                    if (arena.getLobbyCountdown() > 0) {
+                        arena.decrementLobbyCountdown();
+                        arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.sendMessage("&bThe game will start in &3" + arena.getLobbyCountdown() + "&b second(s)!"));
+                    } else {
+                        this.cancel();
+                        arena.setLobbyCountdown(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".lobby-countdown"));
+                        arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.getInventory().clear()); // clear inv before giving railgun
+                        setGameState(game, GameState.INGAME); // lobby countdown ended
+                    }
                 }
             }
         }.runTaskTimer(plugin, 0L, 20L), 100L);
@@ -235,8 +243,6 @@ public class GameManager {
         // clearing all possible leftover powerups
         arena.getPowerupLocations().forEach(location -> Arrays.stream(location.getChunk().getEntities())
                 .filter(entity -> entity instanceof Item).forEach(Entity::remove));
-
-        Bukkit.getLogger().info("[QUAKECRAFT] The arena " + game.getArena().getName() + " is now available again!");
 
         games.remove(game);
     }
@@ -310,23 +316,23 @@ public class GameManager {
 
         quakePlayer.teleport(arena.getLobbyLocation()); // teleport to lobby
 
-        // more or equals the required amount of players are in
-        if (arena.getArenaMembers().size() == arena.getMinPlayers()) startLobbyCountdown(game); // start the lobby cd
+
+        // the required amount of players are in
+        if (arena.getArenaMembers().size() == arena.getMinPlayers()) {
+            if (game.getGameState() != GameState.LOBBY_COUNTDOWN) {
+                setGameState(game, GameState.LOBBY_COUNTDOWN); // update game state
+                startLobbyCountdown(game);
+            }
+        }
 
 
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (getGameByPlayer(quakePlayer) != null) {
-                    if (quakePlayer.getPlayerState() != PlayerState.IN_QUAKE) {
-                        plugin.getQuakeScoreboard().gameScoreboard(quakePlayer, game);
-                    }
+                if (quakePlayer.getPlayerState() != PlayerState.IN_QUAKE) {
+                    plugin.getQuakeScoreboard().gameScoreboard(quakePlayer, game);
                 }
             }
         }.runTaskTimer(plugin, 0L, 20L);
-    }
-
-    public Set<Game> getGames() {
-        return games;
     }
 }

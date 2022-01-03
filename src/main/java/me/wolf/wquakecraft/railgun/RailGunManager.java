@@ -34,7 +34,9 @@ public class RailGunManager {
     }
 
     public RailGun getRailGunFromPlayer(final QuakePlayer player) {
-        if(player.getRailGun() == null) {player.setRailGun(getRailGunByIdentifier("default"));} // give them the default railgun if none were selected
+        if (player.getRailGun() == null) {
+            player.setRailGun(getRailGunByIdentifier("default"));
+        } // give them the default railgun if none were selected
         return player.getRailGun() == null ? getRailGunByIdentifier("default") : player.getRailGun();
     }
 

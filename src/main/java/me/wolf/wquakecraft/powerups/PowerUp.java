@@ -7,8 +7,9 @@ public abstract class PowerUp {
 
     private final String name;
     private final ItemStack icon;
-    private int duration;
     private final int finalDuration;
+    private int duration;
+
     public PowerUp(final String name, final ItemStack icon, final int duration) {
         this.name = name;
         this.icon = icon;
@@ -25,6 +26,10 @@ public abstract class PowerUp {
         return duration;
     }
 
+    public void setDuration(int duration) {
+        this.duration = duration;
+    }
+
     public void decrementDuration() {
         this.duration--;
     }
@@ -35,10 +40,6 @@ public abstract class PowerUp {
 
     public int getFinalDuration() {
         return finalDuration;
-    }
-
-    public void setDuration(int duration) {
-        this.duration = duration;
     }
 
     public abstract void startPowerUp(final QuakePlayer quakePlayer);

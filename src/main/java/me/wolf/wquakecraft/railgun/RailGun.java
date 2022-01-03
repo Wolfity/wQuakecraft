@@ -5,8 +5,8 @@ import org.bukkit.Material;
 public class RailGun implements Comparable<RailGun> {
 
     private final String name, identifier;
-    private double fireRate;
     private final Material material;
+    private double fireRate;
 
     public RailGun(final String identifier, final String name, final Material material, final double fireRate) {
         this.identifier = identifier;

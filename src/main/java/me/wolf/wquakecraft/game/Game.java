@@ -16,11 +16,11 @@ public class Game {
         return gameState;
     }
 
-    public Arena getArena() {
-        return arena;
-    }
-
     public void setGameState(GameState gameState) {
         this.gameState = gameState;
+    }
+
+    public Arena getArena() {
+        return arena;
     }
 }

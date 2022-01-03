@@ -8,6 +8,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 public class BlockPlace implements Listener {
 
     private final QuakeCraftPlugin plugin;
+
     public BlockPlace(final QuakeCraftPlugin plugin) {
         this.plugin = plugin;
     }

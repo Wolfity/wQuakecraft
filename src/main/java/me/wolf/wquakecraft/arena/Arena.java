@@ -8,9 +8,9 @@ import java.util.*;
 public class Arena {
 
     private final String name;
+    private final Set<QuakePlayer> arenaMembers;
     private ArenaState arenaState;
     private int gameTimer, lobbyCountdown, powerupSpawn, maxPlayers, minPlayers, maxKills;
-    private final Set<QuakePlayer> arenaMembers;
     private List<Location> spawnLocations, powerupLocations;
     private Location lobbyLocation;
 
@@ -33,6 +33,11 @@ public class Arena {
         return lobbyLocation;
     }
 
+    public Arena setLobbyLocation(Location lobbyLocation) {
+        this.lobbyLocation = lobbyLocation;
+        return this;
+    }
+
     public String getName() {
         return name;
     }
@@ -41,24 +46,36 @@ public class Arena {
         return arenaState;
     }
 
+    public void setArenaState(ArenaState arenaState) {
+        this.arenaState = arenaState;
+    }
+
     public int getMaxPlayers() {
         return maxPlayers;
+    }
+
+    public Arena setMaxPlayers(int maxPlayers) {
+        this.maxPlayers = maxPlayers;
+        return this;
     }
 
     public int getMinPlayers() {
         return minPlayers;
     }
 
-    public void setArenaState(ArenaState arenaState) {
-        this.arenaState = arenaState;
+    public Arena setMinPlayers(int minPlayers) {
+        this.minPlayers = minPlayers;
+        return this;
     }
 
     public Set<QuakePlayer> getArenaMembers() {
         return arenaMembers;
     }
+
     public void addArenaMember(final QuakePlayer quakePlayer) {
         this.arenaMembers.add(quakePlayer);
     }
+
     public void removeArenaMember(final QuakePlayer quakePlayer) {
         this.arenaMembers.remove(quakePlayer);
     }
@@ -67,53 +84,17 @@ public class Arena {
         return gameTimer;
     }
 
-    public int getLobbyCountdown() {
-        return lobbyCountdown;
-    }
-
-    public Arena setLobbyLocation(Location lobbyLocation) {
-        this.lobbyLocation = lobbyLocation;
-        return this;
-    }
-
     public Arena setGameTimer(int gameTimer) {
         this.gameTimer = gameTimer;
         return this;
     }
 
+    public int getLobbyCountdown() {
+        return lobbyCountdown;
+    }
+
     public Arena setLobbyCountdown(int lobbyCountdown) {
         this.lobbyCountdown = lobbyCountdown;
-        return this;
-    }
-
-    public Arena setPowerupLocations(List<Location> powerupLocations) {
-        this.powerupLocations = powerupLocations;
-        return this;
-    }
-
-
-    public Arena setSpawnLocations(List<Location> spawnLocations) {
-        this.spawnLocations = spawnLocations;
-        return this;
-    }
-
-    public Arena setMaxKills(int maxKills) {
-        this.maxKills = maxKills;
-        return this;
-    }
-
-    public Arena setMinPlayers(int minPlayers) {
-        this.minPlayers = minPlayers;
-        return this;
-    }
-
-    public Arena setMaxPlayers(int maxPlayers) {
-        this.maxPlayers = maxPlayers;
-        return this;
-    }
-
-    public Arena setPowerupSpawn(int powerupSpawn) {
-        this.powerupSpawn = powerupSpawn;
         return this;
     }
 
@@ -123,6 +104,11 @@ public class Arena {
 
     public List<Location> getSpawnLocations() {
         return spawnLocations;
+    }
+
+    public Arena setSpawnLocations(List<Location> spawnLocations) {
+        this.spawnLocations = spawnLocations;
+        return this;
     }
 
     public void decrementLobbyCountdown() {
@@ -137,12 +123,22 @@ public class Arena {
         return powerupLocations;
     }
 
+    public Arena setPowerupLocations(List<Location> powerupLocations) {
+        this.powerupLocations = powerupLocations;
+        return this;
+    }
+
     public void addPowerupLocation(final Location location) {
         this.powerupLocations.add(location);
     }
 
     public int getPowerupSpawn() {
         return powerupSpawn;
+    }
+
+    public Arena setPowerupSpawn(int powerupSpawn) {
+        this.powerupSpawn = powerupSpawn;
+        return this;
     }
 
     public void decrementPowerUpTimer() {
@@ -153,6 +149,10 @@ public class Arena {
         return maxKills;
     }
 
+    public Arena setMaxKills(int maxKills) {
+        this.maxKills = maxKills;
+        return this;
+    }
 
     @Override
     public boolean equals(Object o) {

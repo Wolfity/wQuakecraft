@@ -11,12 +11,11 @@ import java.util.stream.Collectors;
 public class ArenaManager {
 
     private final YamlConfig cfg;
+    private final Set<Arena> arenas = new HashSet<>();
 
     public ArenaManager(final YamlConfig cfg) {
         this.cfg = cfg;
     }
-
-    private final Set<Arena> arenas = new HashSet<>();
 
     public void createArena(final String name) {
         final Arena arena = new Arena(name);

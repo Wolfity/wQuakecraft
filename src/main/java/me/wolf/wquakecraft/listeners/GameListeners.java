@@ -26,13 +26,12 @@ import java.util.Map;
 
 public class GameListeners implements Listener {
 
+    final Map<QuakePlayer, Long> cooldownMap = new HashMap<>();
     private final QuakeCraftPlugin plugin;
 
     public GameListeners(final QuakeCraftPlugin plugin) {
         this.plugin = plugin;
     }
-
-    final Map<QuakePlayer, Long> cooldownMap = new HashMap<>();
 
     @EventHandler
     public void onShoot(PlayerInteractEvent event) {

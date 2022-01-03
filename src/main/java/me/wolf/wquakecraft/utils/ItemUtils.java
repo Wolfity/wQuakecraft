@@ -9,6 +9,9 @@ import java.util.List;
 
 public final class ItemUtils {
 
+    private ItemUtils() {
+    }
+
     public static ItemStack createItem(final Material mat, final String display, final int amount) {
         final ItemStack is = new ItemStack(mat, amount);
         final ItemMeta meta = is.getItemMeta();
@@ -92,7 +95,5 @@ public final class ItemUtils {
 
         return is;
     }
-
-    private ItemUtils() {}
 
 }

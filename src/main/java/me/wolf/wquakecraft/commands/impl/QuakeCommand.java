@@ -13,9 +13,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class QuakeCommand extends BaseCommand {
-    //TODO Patches: added kills to scoreboard, added joinany command, fixed leaving a game as last player throwing exception
-    //TODO Patches: Fixed leaving midgame using the /quake leavegame command, fixed a bug where /quake joinany allows you to join multiple games
-    // TODO patches: You no longer lose hunger
 
     private final QuakeCraftPlugin plugin;
 
@@ -52,7 +49,7 @@ public class QuakeCommand extends BaseCommand {
                 }
             }
             if (args[0].equalsIgnoreCase("joinany")) {
-                if(quakePlayer.getPlayerState() == PlayerState.IN_QUAKE) {
+                if (quakePlayer.getPlayerState() == PlayerState.IN_QUAKE) {
                     if (plugin.getArenaManager().getFreeArena() != null) {
                         plugin.getGameManager().joinGame(quakePlayer);
                     } else tell("&cNo Available Free arenas right now!");

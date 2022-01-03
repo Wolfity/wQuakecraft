@@ -8,6 +8,9 @@ import java.util.List;
 
 public final class Utils {
 
+    private Utils() {
+    }
+
     public static String colorize(final String input) {
         return input == null ? "Null value" : ChatColor.translateAlternateColorCodes('&', input);
     }
@@ -27,7 +30,6 @@ public final class Utils {
         }
         return colorized;
     }
-
 
     public static void sendCenteredMessage(Player player, String message) {
         int CENTER_PX = 154;
@@ -63,7 +65,5 @@ public final class Utils {
         }
         player.sendMessage(sb + message);
     }
-
-    private Utils() {}
 
 }

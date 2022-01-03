@@ -20,6 +20,7 @@ public class QuakeScoreboard {
 
     public void lobbyScoreboard(final Player player) {
         final QuakePlayer quakePlayer = plugin.getPlayerManager().getQuakePlayer(player.getUniqueId());
+        if (quakePlayer == null) return;
         final String activeGun = quakePlayer.getRailGun() == null ? Utils.colorize("&cNone") : quakePlayer.getRailGun().getName();
 
 
@@ -46,6 +47,9 @@ public class QuakeScoreboard {
     }
 
     public void gameScoreboard(final QuakePlayer player, final Game game) {
+        if (player == null) return;
+        if (game == null) return;
+
         final String name = game.getArena().getName();
 
         final ScoreboardManager scoreboardManager = plugin.getServer().getScoreboardManager();
