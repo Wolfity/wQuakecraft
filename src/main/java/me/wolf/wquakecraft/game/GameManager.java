@@ -56,37 +56,6 @@ public class GameManager {
         }
     }
 
-    // cleaning up everything after the game, remove players from the game, remove the arena from the game, etc...
-    private void cleanupGame(final Game game) {
-        final Arena arena = game.getArena();
-        arena.setArenaState(ArenaState.READY);
-        arena.setGameTimer(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".game-timer"));
-
-        arena.getArenaMembers().forEach(player -> {
-            leaveGame(player); // leave the game + give the rail gun selector back
-            player.getInventory().setItem(0, ItemUtils.createItem(Material.WOODEN_HOE, "&cChoose a Rail Gun"));
-        });
-
-        arena.getArenaMembers().clear();
-
-        // clearing all possible leftover powerups
-        arena.getPowerupLocations().forEach(location -> Arrays.stream(location.getChunk().getEntities())
-                .filter(entity -> entity instanceof Item).forEach(Entity::remove));
-
-        Bukkit.getLogger().info("[QUAKECRAFT] The arena " + game.getArena().getName() + " is now available again!");
-
-        games.remove(game);
-    }
-
-    // giving each user their gun
-    private void giveGuns(final Arena arena) {
-        arena.getArenaMembers().forEach(quakePlayer -> {
-            final RailGun railGun = plugin.getRailGunManager().getRailGunFromPlayer(quakePlayer);
-            quakePlayer.getInventory().addItem(ItemUtils.createItem(railGun.getMaterial(), railGun.getName()));
-            quakePlayer.sendMessage("&aReceived your Rail Gun: " + railGun.getName());
-        });
-    }
-
     public void handleGameKill(final Game game, final QuakePlayer killer, final QuakePlayer killed) {
         game.getArena().getArenaMembers().forEach(player -> player.sendMessage("&b" + killed.getName() + " &3was killed by &3" + killer.getName()));
         killer.incrementKills();
@@ -109,6 +78,82 @@ public class GameManager {
         }
     }
 
+    /**
+     * @param quakePlayer: Player joining a game
+     * @param arena:       The specific arena a user wants to join
+     */
+    public void joinGame(final QuakePlayer quakePlayer, final Arena arena) {
+        if (arena.getArenaMembers().size() + 1 <= arena.getMaxPlayers()) {
+            Game game = getGameByArena(arena); // checking if there is a game active from the arena the user wants to play in
+            if (getGameByArena(arena) == null) { // if there is none, create a new one
+                game = new Game(arena);
+            }
+            games.add(game);
+
+            prepareGameJoin(game, quakePlayer);
+        } else quakePlayer.sendMessage("&cJoining this is not possible right now!");
+    }
+
+    /**
+     * @param quakePlayer: The player that requests to join any game, no particular arena
+     */
+    public void joinGame(final QuakePlayer quakePlayer) {
+        final Arena arena = plugin.getArenaManager().getFreeArena();
+        if (arena.getArenaMembers().size() + 1 <= arena.getMaxPlayers()) {
+            Game game;
+            if (getGameByArena(arena) == null) { // if there is no game with the free arena, create a new one
+                game = new Game(arena);
+                games.add(game);
+            }
+            game = getGameByArena(arena);
+            games.add(game);
+
+            prepareGameJoin(game, quakePlayer);
+        } else quakePlayer.sendMessage("&cJoining this is not possible right now!");
+    }
+
+    /**
+     * @param quakePlayer: The player we are removing from the game and teleporting
+     * @param cleanUp: whether it is for the game cleanup, or an individual player leaving
+     */
+    public void leaveGame(final QuakePlayer quakePlayer, final boolean cleanUp) {
+        final Arena arena = plugin.getArenaManager().getArenaByPlayer(quakePlayer);
+        if (arena == null) return;
+
+        quakePlayer.sendMessage("&aSuccessfully left the arena!");
+        quakePlayer.setPlayerState(PlayerState.IN_QUAKE); // resetting their state back to lobby
+        quakePlayer.clearFullInv(); // resetting their inventory, hunger and teleporting them back to the hub
+        quakePlayer.resetHunger();
+        quakePlayer.teleport( // teleport to the quake spawn
+                new Location(Bukkit.getWorld(Objects.requireNonNull(plugin.getConfig().getString("spawn.world"))),
+                        plugin.getConfig().getDouble("spawn.x"),
+                        plugin.getConfig().getDouble("spawn.y"),
+                        plugin.getConfig().getDouble("spawn.z"),
+                        (float) plugin.getConfig().getDouble("spawn.pitch"),
+                        (float) plugin.getConfig().getDouble("spawn.yaw")));
+
+        quakePlayer.setKills(0); // reset their kills
+
+        if (!cleanUp) { // else it will throw ConcurrentModificationException
+            arena.getArenaMembers().remove(quakePlayer);
+        }
+
+        plugin.getQuakeScoreboard().lobbyScoreboard(quakePlayer.getBukkitPlayer());
+
+        System.out.println("playerstate " + quakePlayer.getPlayerState());
+        System.out.println("game " + getGameByPlayer(quakePlayer));
+
+        if (arena.getArenaMembers().size() <= 1) { // - 1 because the quake player gets removed after this method
+            setGameState(getGameByArena(arena), GameState.END);
+        }
+
+    }
+
+    // get the game a player is in, throws null if not in game
+    public Game getGameByPlayer(final QuakePlayer player) {
+        return games.stream().filter(game -> game.getArena().getArenaMembers().contains(player)).findFirst().orElse(null);
+    }
+
     // starting the lobby countdown, when it ends, players are teleported to spawns and the game starts
     private void startLobbyCountdown(final Game game) {
         final Arena arena = game.getArena();
@@ -121,7 +166,7 @@ public class GameManager {
                 } else {
                     this.cancel();
                     arena.setLobbyCountdown(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".lobby-countdown"));
-                    arena.getArenaMembers().forEach(quakPlayer -> quakPlayer.getInventory().clear()); // clear inv before giving railgun
+                    arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.getInventory().clear()); // clear inv before giving railgun
                     setGameState(game, GameState.INGAME); // lobby countdown ended
 
                 }
@@ -171,67 +216,44 @@ public class GameManager {
         arena.getArenaMembers().forEach(quakePlayer -> quakePlayer.sendMessage("&3[!] &bA Power Up has been spawned! Walk over it to use it"));
     }
 
-    // method for handling game joins
-    public void joinGame(final QuakePlayer quakePlayer, final Arena arena) {
-        quakePlayer.setPlayerState(PlayerState.IN_PREGAME);
+    // cleaning up everything after the game, remove players from the game, remove the arena from the game, etc...
+    private void cleanupGame(final Game game) {
+        final Arena arena = game.getArena();
+        arena.setArenaState(ArenaState.READY);
+        // reset the timer
+        arena.setGameTimer(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".game-timer"));
 
-        Game game = getGameByArena(arena); // checing if there is a game active from the arena the user wants to play in
-        if (getGameByArena(arena) == null) { // if there is none, create a new one
-            game = new Game(arena);
-        }
-        games.add(game);
+        // leave the game, add the railgun selector + reset hte playerstate
+        arena.getArenaMembers().stream().filter(Objects::nonNull).forEach(player -> {
+            leaveGame(player, true); // leave the game + give the rail gun selector back
+            player.getInventory().setItem(0, ItemUtils.createItem(Material.WOODEN_HOE, "&cChoose a Rail Gun"));
+            player.setPlayerState(PlayerState.IN_QUAKE);
+        });
 
-        arena.addArenaMember(quakePlayer);
-        quakePlayer.sendMessage("&aSuccessfully joined a game!"); // send a message to all current players
-        arena.getArenaMembers().forEach(queueMember -> queueMember.sendMessage("&b" + quakePlayer.getName() + "&3 joined the game!"));
+        arena.getArenaMembers().clear();
 
-        quakePlayer.teleport(arena.getLobbyLocation()); // teleport to lobby
+        // clearing all possible leftover powerups
+        arena.getPowerupLocations().forEach(location -> Arrays.stream(location.getChunk().getEntities())
+                .filter(entity -> entity instanceof Item).forEach(Entity::remove));
 
-        if (arena.getArenaMembers().size() == arena.getMinPlayers()) { // more or equals the required amount of players are in
-            startLobbyCountdown(game); // start the lobby cd
-        }
+        Bukkit.getLogger().info("[QUAKECRAFT] The arena " + game.getArena().getName() + " is now available again!");
 
-        final Game finalGame = game;
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (quakePlayer.getPlayerState() != PlayerState.IN_QUAKE) {
-                    plugin.getQuakeScoreboard().gameScoreboard(quakePlayer.getBukkitPlayer(), finalGame);
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 20L);
+        games.remove(game);
     }
 
-    // method for handling a game leave
-    public void leaveGame(final QuakePlayer quakePlayer) {
-        final Arena arena = plugin.getArenaManager().getArenaByPlayer(quakePlayer);
-        if (arena == null) return;
-
-        quakePlayer.sendMessage("&aSuccessfully left the arena!");
-        quakePlayer.setPlayerState(PlayerState.IN_QUAKE); // resetting their state back to lobby
-        quakePlayer.clearFullInv(); // resetting their inventory, hunger and teleporting them back to the hub
-        quakePlayer.resetHunger();
-        quakePlayer.teleport( // teleport to the quake spawn
-                new Location(Bukkit.getWorld(Objects.requireNonNull(plugin.getConfig().getString("spawn.world"))),
-                        plugin.getConfig().getDouble("spawn.x"),
-                        plugin.getConfig().getDouble("spawn.y"),
-                        plugin.getConfig().getDouble("spawn.z"),
-                        (float) plugin.getConfig().getDouble("spawn.pitch"),
-                        (float) plugin.getConfig().getDouble("spawn.yaw")));
-
-        quakePlayer.setKills(0); // reset their kills
-        plugin.getQuakeScoreboard().lobbyScoreboard(quakePlayer.getBukkitPlayer());
-        // remove them from the arena
+    // giving each user their gun
+    private void giveGuns(final Arena arena) {
+        arena.getArenaMembers().forEach(quakePlayer -> {
+            final RailGun railGun = plugin.getRailGunManager().getRailGunFromPlayer(quakePlayer);
+            quakePlayer.getInventory().addItem(ItemUtils.createItem(railGun.getMaterial(), railGun.getName()));
+            quakePlayer.sendMessage("&aReceived your Rail Gun: " + railGun.getName());
+        });
     }
+
 
     // get the game based of an arena
     private Game getGameByArena(final Arena arena) {
         return games.stream().filter(game -> game.getArena().equals(arena)).findFirst().orElse(null);
-    }
-
-    // get the game a player is in, throws null if not in game
-    public Game getGameByPlayer(final QuakePlayer player) {
-        return games.stream().filter(game -> game.getArena().getArenaMembers().contains(player)).findFirst().orElse(null);
     }
 
     // teleport every player to a different spawn loc
@@ -246,8 +268,9 @@ public class GameManager {
      * @param game:    the game we are sending the message to
      * @param gameEnd: true -> message for game endings, false -> message for game start
      */
-
     private void sendGameMessage(final Game game, final boolean gameEnd) {
+        if (game.getArena().getArenaMembers().isEmpty()) return;
+
         final QuakePlayer winner = Collections.max(game.getArena().getArenaMembers(), Comparator.comparingInt(QuakePlayer::getKills));
         game.getArena().getArenaMembers().forEach(arenaMember -> {
             if (gameEnd) {
@@ -271,6 +294,36 @@ public class GameManager {
             }
             arenaMember.getBukkitPlayer().playSound(arenaMember.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.5F, 0.5F);
         });
+    }
+
+    /**
+     * @param game:        The game being joined by the player
+     * @param quakePlayer: The player that is joining the game
+     *                     This method contains the setting up of the game and adding the player to it.
+     */
+    private void prepareGameJoin(final Game game, final QuakePlayer quakePlayer) {
+        quakePlayer.setPlayerState(PlayerState.IN_PREGAME);
+        final Arena arena = game.getArena();
+        arena.addArenaMember(quakePlayer);
+        quakePlayer.sendMessage("&aSuccessfully joined a game!"); // send a message to all current players
+        arena.getArenaMembers().forEach(queueMember -> queueMember.sendMessage("&b" + quakePlayer.getName() + "&3 joined the game!"));
+
+        quakePlayer.teleport(arena.getLobbyLocation()); // teleport to lobby
+
+        // more or equals the required amount of players are in
+        if (arena.getArenaMembers().size() == arena.getMinPlayers()) startLobbyCountdown(game); // start the lobby cd
+
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (getGameByPlayer(quakePlayer) != null) {
+                    if (quakePlayer.getPlayerState() != PlayerState.IN_QUAKE) {
+                        plugin.getQuakeScoreboard().gameScoreboard(quakePlayer, game);
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
     public Set<Game> getGames() {

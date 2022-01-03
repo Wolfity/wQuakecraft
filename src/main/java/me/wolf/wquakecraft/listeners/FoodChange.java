@@ -17,7 +17,7 @@ public class FoodChange implements Listener {
     @EventHandler
     public void onFoodChange(FoodLevelChangeEvent event) {
         if(!(event.getEntity() instanceof Player)) return;
-
+        event.setFoodLevel(20);
         event.setCancelled(plugin.getPlayerManager().getQuakePlayer(event.getEntity().getUniqueId()) != null);
     }
 

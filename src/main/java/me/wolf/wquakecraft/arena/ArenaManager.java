@@ -98,11 +98,7 @@ public class ArenaManager {
     }
 
     public Arena getFreeArena() {
-        return arenas.stream().filter(arena -> arena.getArenaState() == ArenaState.READY).findFirst().orElse(null);
-    }
-
-    public Set<Arena> getArenas() {
-        return arenas;
+        return arenas.stream().filter(arena -> arena.getArenaState() == ArenaState.READY || arena.getArenaState() == ArenaState.PREGAME).findFirst().orElse(null);
     }
 
     public boolean doesArenaExist(final String name) { // check if an arena with the passed in name exists

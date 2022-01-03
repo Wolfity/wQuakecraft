@@ -22,14 +22,12 @@ public class PlayerQuit implements Listener {
 
         if (player.isInGame()) {
             final Game game = plugin.getGameManager().getGameByPlayer(player);
-            plugin.getGameManager().leaveGame(player);
-            plugin.getArenaManager().getArenaByPlayer(player).removeArenaMember(player);
             plugin.getPlayerManager().removeQuakePlayer(event.getPlayer().getUniqueId());
 
             if(game.getArena().getArenaMembers().size() <= 1) { // if a user leaves, and there are either 0 players or 1, the game ends
                 plugin.getGameManager().setGameState(game, GameState.END);
             }
-
+            plugin.getGameManager().leaveGame(player, false);
         }
 
     }

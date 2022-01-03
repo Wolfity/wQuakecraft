@@ -7,15 +7,15 @@ import me.wolf.wquakecraft.commands.BaseCommand;
 import me.wolf.wquakecraft.files.YamlConfig;
 import me.wolf.wquakecraft.player.PlayerState;
 import me.wolf.wquakecraft.player.QuakePlayer;
-import me.wolf.wquakecraft.utils.ItemUtils;
 import me.wolf.wquakecraft.utils.Utils;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class QuakeCommand extends BaseCommand {
+    //TODO Patches: added kills to scoreboard, added joinany command, fixed leaving a game as last player throwing exception
+    //TODO Patches: Fixed leaving midgame using the /quake leavegame command, fixed a bug where /quake joinany allows you to join multiple games
+    // TODO patches: You no longer lose hunger
 
     private final QuakeCraftPlugin plugin;
 
@@ -31,10 +31,8 @@ public class QuakeCommand extends BaseCommand {
         final ArenaManager arenaManager = plugin.getArenaManager();
         if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
             player.sendMessage(Utils.colorize("&b[----------&7Quake Help &b----------]\n" +
-                    "&b/quake join &7- Join Quakecraft \n" +
-                    "&b/quake leave &7- Leave Quakecraft\n" +
                     "&b/quake joinarena <arena> &7- Join the arena if possible\n" +
-                    "&b/quake leavearena &7- Leave your current arena\n" +
+                    "&b/quake leavegame &7- Leave your current game\n" +
                     "&b/quake joinany &7- Join any free available arena\n" +
                     "&b/quake arenas &7- List all free arenas\n" +
                     "[-------------------------------]"));
@@ -53,24 +51,12 @@ public class QuakeCommand extends BaseCommand {
                     setHub(player.getLocation());
                 }
             }
-            if (args[0].equalsIgnoreCase("join")) {
-                if (quakePlayer == null) {
-                    plugin.getPlayerManager().createQuakePlayer(player.getUniqueId());
-                    plugin.getQuakeScoreboard().lobbyScoreboard(player);
-                    tell("&aSuccessfully joined quake!");
-                    player.getInventory().setItem(0, ItemUtils.createItem(Material.WOODEN_HOE, "&cChoose a Rail Gun"));
-
-                } else tell("&aYou are already in quakecraft!");
-
-            } else if (args[0].equalsIgnoreCase("leave")) {
-                if (quakePlayer != null) {
-                    tell("&aSuccessfully left quakecraft, cya!");
-                    quakePlayer.getInventory().removeItem(ItemUtils.createItem(Material.WOODEN_HOE, "&cChoose a Rail Gun"));
-                    plugin.getPlayerManager().removeQuakePlayer(player.getUniqueId());
-                    player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
-
-
-                } else tell("&cYou are not in quakecraft!");
+            if (args[0].equalsIgnoreCase("joinany")) {
+                if(quakePlayer.getPlayerState() == PlayerState.IN_QUAKE) {
+                    if (plugin.getArenaManager().getFreeArena() != null) {
+                        plugin.getGameManager().joinGame(quakePlayer);
+                    } else tell("&cNo Available Free arenas right now!");
+                } else tell("&cYou need to leave your current game first!");
 
             } else if (args[0].equalsIgnoreCase("arenas")) {
                 final StringBuilder stringBuilder = new StringBuilder("&bAvailable Arenas:\n");
@@ -78,54 +64,52 @@ public class QuakeCommand extends BaseCommand {
                     stringBuilder.append("&3- &a").append(arena.getName()).append("\n");
                 }
                 player.sendMessage(Utils.colorize(stringBuilder.toString()));
-            } else if (args[0].equalsIgnoreCase("leavearena")) {
+            } else if (args[0].equalsIgnoreCase("leavegame")) {
                 if (quakePlayer.isInGame()) {
-                    plugin.getGameManager().leaveGame(quakePlayer);
-                    plugin.getArenaManager().getArenaByPlayer(quakePlayer).removeArenaMember(quakePlayer);
+                    plugin.getGameManager().leaveGame(quakePlayer, false);
                 } else tell("&cYou are not in a game!");
             }
         }
         if (args.length == 2) {
-            if (quakePlayer != null) {
-                final String arenaName = args[1];
-                if (args[0].equalsIgnoreCase("joinarena")) {
-                    if (arenaManager.isArenaAvailable(arenaName)) { // also checks whether it exists
-                        if (quakePlayer.getPlayerState() == PlayerState.IN_QUAKE) {
-                            plugin.getGameManager().joinGame(quakePlayer, arenaManager.getArenaByName(arenaName));
-                        } else tell("&cYou need to leave your current game first!");
-                    } else tell("&cThis arena is not available!");
-                }
-                // creating an arena
+            final String arenaName = args[1];
+            if (args[0].equalsIgnoreCase("joinarena")) {
+                if (arenaManager.isArenaAvailable(arenaName)) { // also checks whether it exists
+                    if (quakePlayer.getPlayerState() == PlayerState.IN_QUAKE) {
+                        plugin.getGameManager().joinGame(quakePlayer, arenaManager.getArenaByName(arenaName));
+                    } else tell("&cYou need to leave your current game first!");
+                } else tell("&cThis arena is not available!");
+            }
+            // creating an arena
 
-                if (args[0].equalsIgnoreCase("createarena")) {
-                    if (isAdmin()) {
-                        if (!arenaManager.doesArenaExist(arenaName)) {
-                            arenaManager.createArena(arenaName);
-                            quakePlayer.sendMessage("&aSuccessfully created the arena &2" + arenaName);
-                        } else quakePlayer.sendMessage("&cThis arena already exists!");
-                    }
-                    // removing an arena
-                } else if (args[0].equalsIgnoreCase("removearena")) {
-                    if (isAdmin()) {
-                        if (arenaManager.doesArenaExist(arenaName)) {
-                            arenaManager.deleteArena(arenaName);
-                            quakePlayer.sendMessage("&aSuccessfully deleted the arena &2" + arenaName);
-                        }
-                    }
-                } else if (args[0].equalsIgnoreCase("addspawn")) {
-                    if (isAdmin()) {
-                        addSpawn(quakePlayer, arenaName, plugin.getFileManager().getArenasConfigFile());
-                    }
-                } else if (args[0].equalsIgnoreCase("setlobby")) {
-                    if (isAdmin()) {
-                        setLobby(quakePlayer, arenaName, plugin.getFileManager().getArenasConfigFile());
-                    }
-                } else if (args[0].equalsIgnoreCase("addpowerupspawn")) {
-                    if(isAdmin()) {
-                        addPowerupSpawn(quakePlayer, arenaName, plugin.getFileManager().getArenasConfigFile());
+            if (args[0].equalsIgnoreCase("createarena")) {
+                if (isAdmin()) {
+                    if (!arenaManager.doesArenaExist(arenaName)) {
+                        arenaManager.createArena(arenaName);
+                        quakePlayer.sendMessage("&aSuccessfully created the arena &2" + arenaName);
+                    } else quakePlayer.sendMessage("&cThis arena already exists!");
+                }
+                // removing an arena
+            } else if (args[0].equalsIgnoreCase("removearena")) {
+                if (isAdmin()) {
+                    if (arenaManager.doesArenaExist(arenaName)) {
+                        arenaManager.deleteArena(arenaName);
+                        quakePlayer.sendMessage("&aSuccessfully deleted the arena &2" + arenaName);
                     }
                 }
-            } else tell("&cYou need to be in Quakecraft in order to execute this command!");
+            } else if (args[0].equalsIgnoreCase("addspawn")) {
+                if (isAdmin()) {
+                    addSpawn(quakePlayer, arenaName, plugin.getFileManager().getArenasConfigFile());
+                }
+            } else if (args[0].equalsIgnoreCase("setlobby")) {
+                if (isAdmin()) {
+                    setLobby(quakePlayer, arenaName, plugin.getFileManager().getArenasConfigFile());
+                }
+            } else if (args[0].equalsIgnoreCase("addpowerupspawn")) {
+                if (isAdmin()) {
+                    addPowerupSpawn(quakePlayer, arenaName, plugin.getFileManager().getArenasConfigFile());
+                }
+            }
+
         }
 
     }

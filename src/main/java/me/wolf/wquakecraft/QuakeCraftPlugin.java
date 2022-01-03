@@ -13,6 +13,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -39,6 +40,16 @@ public class QuakeCraftPlugin extends JavaPlugin {
         registerListeners();
 
 
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                gameManager.getGames().forEach(game -> {
+                    System.out.println("GameState " + game.getGameState());
+                    System.out.println("members " + game.getArena().getArenaMembers().size());
+                });
+            }
+        }.runTaskTimer(this, 0, 20);
+
     }
 
     private void registerCommands() {
@@ -54,7 +65,8 @@ public class QuakeCraftPlugin extends JavaPlugin {
                 new BlockBreak(this),
                 new InventoryInteractions(this),
                 new GameListeners(this),
-                new PlayerQuit(this)
+                new PlayerQuit(this),
+                new PlayerJoin(this)
         ).forEach(listener -> Bukkit.getPluginManager().registerEvents(listener, this));
     }
 

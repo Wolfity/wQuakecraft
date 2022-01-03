@@ -45,7 +45,7 @@ public class QuakeScoreboard {
         player.setScoreboard(scoreboard);
     }
 
-    public void gameScoreboard(final Player player, final Game game) {
+    public void gameScoreboard(final QuakePlayer player, final Game game) {
         final String name = game.getArena().getName();
 
         final ScoreboardManager scoreboardManager = plugin.getServer().getScoreboardManager();
@@ -79,8 +79,13 @@ public class QuakeScoreboard {
         empty2.setSuffix("");
         objective.getScore("  ").setScore(4);
 
+        final Team kills = scoreboard.registerNewTeam("kills");
+        kills.addEntry(Utils.colorize("&3Kills: "));
+        kills.setPrefix("");
+        kills.setSuffix(Utils.colorize("&2" + player.getKills()));
+        objective.getScore(Utils.colorize("&3Kills: ")).setScore(5);
 
-        player.setScoreboard(scoreboard);
+        player.getBukkitPlayer().setScoreboard(scoreboard);
     }
 
 }
