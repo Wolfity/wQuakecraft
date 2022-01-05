@@ -145,8 +145,10 @@ public class GameManager {
                 setGameState(getGameByArena(arena), GameState.END);
 
             } else if (arena.getArenaMembers().size() < arena.getMinPlayers()) { // if a user leaves, and there are less players then the required, cancel countdown
-                arena.getArenaMembers().forEach(member -> member.sendMessage("&cThere are not enough players, countdown stopped!"));
-                getGameByArena(arena).setGameState(GameState.PREGAME); // set it back to before countdown
+                if(!cleanUp) {
+                    arena.getArenaMembers().forEach(member -> member.sendMessage("&cThere are not enough players, countdown stopped!"));
+                }
+                setGameState(getGameByArena(arena), GameState.PREGAME); // set it back to before countdown
                 arena.setLobbyCountdown(plugin.getFileManager().getArenasConfigFile().getConfig().getInt("arenas." + arena.getName() + ".lobby-countdown"));
             }
         }
