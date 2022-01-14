@@ -53,7 +53,7 @@ public class QuakeCommand extends Command {
                 if (player.getBukkitPlayer().hasPermission("quake.admin")) {
                     msg.append("&7[----------&bQuake Help&7----------] \n");
                     adminCommands.forEach(subCommand -> msg.append(subCommand.getUsage()).append(" - ").append(subCommand.getDescription()).append("\n"));
-                    msg.append("&7[-------------------------------]");
+                    msg.append("&7[-------------------------------]\n");
                 }
                 subCommands.forEach(subCommand -> msg.append(subCommand.getUsage()).append(" - ").append(subCommand.getDescription()).append("\n"));
 
