@@ -8,6 +8,7 @@ import me.wolf.wquakecraft.player.QuakePlayer;
 import me.wolf.wquakecraft.powerups.PowerUp;
 import me.wolf.wquakecraft.railgun.RailGun;
 import me.wolf.wquakecraft.utils.ItemUtils;
+import me.wolf.wquakecraft.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -119,18 +120,13 @@ public class GameManager {
     public void leaveGame(final QuakePlayer quakePlayer, final boolean cleanUp) {
         final Arena arena = plugin.getArenaManager().getArenaByPlayer(quakePlayer);
         if (arena == null) return;
+        final Game game = getGameByArena(arena);
 
         quakePlayer.sendMessage("&aSuccessfully left the arena!");
         quakePlayer.setPlayerState(PlayerState.IN_QUAKE); // resetting their state back to lobby
         quakePlayer.clearFullInv(); // resetting their inventory, hunger and teleporting them back to the hub
         quakePlayer.resetHunger();
-        quakePlayer.teleport( // teleport to the quake spawn
-                new Location(Bukkit.getWorld(Objects.requireNonNull(plugin.getConfig().getString("spawn.world"))),
-                        plugin.getConfig().getDouble("spawn.x"),
-                        plugin.getConfig().getDouble("spawn.y"),
-                        plugin.getConfig().getDouble("spawn.z"),
-                        (float) plugin.getConfig().getDouble("spawn.pitch"),
-                        (float) plugin.getConfig().getDouble("spawn.yaw")));
+        quakePlayer.teleport(Utils.stringToLoc(plugin.getConfig().getString("hub").split(" ")));  // teleport to the quake spawn
 
         quakePlayer.setKills(0); // reset their kills
 
@@ -140,12 +136,12 @@ public class GameManager {
 
         plugin.getQuakeScoreboard().lobbyScoreboard(quakePlayer.getBukkitPlayer());
 
-        if (arena.getArenaMembers().size() <= 1) { //
-            if (arena.getArenaState() == ArenaState.INGAME || arena.getArenaMembers().size() == 0) { // if it's in a lobby, or no players are in queue anymore, just cancel the countdown
+        if (arena.getArenaMembers().size() <= 1) {
+            if (game.getGameState() == GameState.INGAME || arena.getArenaMembers().size() == 0) { // if it's in a lobby, or no players are in queue anymore, just cancel the countdown
                 setGameState(getGameByArena(arena), GameState.END);
 
             } else if (arena.getArenaMembers().size() < arena.getMinPlayers()) { // if a user leaves, and there are less players then the required, cancel countdown
-                if(!cleanUp) {
+                if (!cleanUp) {
                     arena.getArenaMembers().forEach(member -> member.sendMessage("&cThere are not enough players, countdown stopped!"));
                 }
                 setGameState(getGameByArena(arena), GameState.PREGAME); // set it back to before countdown
@@ -332,7 +328,7 @@ public class GameManager {
             @Override
             public void run() {
                 if (quakePlayer.getPlayerState() != PlayerState.IN_QUAKE) {
-                    plugin.getQuakeScoreboard().gameScoreboard(quakePlayer, game);
+                    plugin.getQuakeScoreboard().gameScoreboard(quakePlayer);
                 }
             }
         }.runTaskTimer(plugin, 0L, 20L);

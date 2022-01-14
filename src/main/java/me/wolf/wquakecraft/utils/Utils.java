@@ -1,6 +1,8 @@
 package me.wolf.wquakecraft.utils;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -64,6 +66,24 @@ public final class Utils {
             compensated += spaceLength;
         }
         player.sendMessage(sb + message);
+    }
+
+    public static String locationToString(final Location location) {
+        return location.getWorld().getName() + " " +
+                location.getX() + " " +
+                location.getY() + " " +
+                location.getZ() + " " +
+                location.getYaw() + " " +
+                location.getPitch();
+    }
+
+    public static Location stringToLoc(final String[] strings) {
+        return new Location(Bukkit.getWorld(strings[0]),
+                Double.parseDouble(strings[1]),
+                Double.parseDouble(strings[2]),
+                Double.parseDouble(strings[3]),
+                Float.parseFloat(strings[4]),
+                Float.parseFloat(strings[5]));
     }
 
 }

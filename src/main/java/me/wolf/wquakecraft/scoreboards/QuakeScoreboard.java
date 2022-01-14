@@ -1,6 +1,7 @@
 package me.wolf.wquakecraft.scoreboards;
 
 import me.wolf.wquakecraft.QuakeCraftPlugin;
+import me.wolf.wquakecraft.arena.Arena;
 import me.wolf.wquakecraft.game.Game;
 import me.wolf.wquakecraft.player.QuakePlayer;
 import me.wolf.wquakecraft.utils.Utils;
@@ -21,6 +22,7 @@ public class QuakeScoreboard {
     public void lobbyScoreboard(final Player player) {
         final QuakePlayer quakePlayer = plugin.getPlayerManager().getQuakePlayer(player.getUniqueId());
         if (quakePlayer == null) return;
+
         final String activeGun = quakePlayer.getRailGun() == null ? Utils.colorize("&cNone") : quakePlayer.getRailGun().getName();
 
 
@@ -34,7 +36,7 @@ public class QuakeScoreboard {
         final Team help = scoreboard.registerNewTeam("help");
         help.addEntry(Utils.colorize("&7For Info: "));
         help.setPrefix("");
-        help.setSuffix(Utils.colorize("&a" + "/quake help"));
+        help.setSuffix(Utils.colorize("&a" + "/quake"));
         objective.getScore(Utils.colorize("&7For Info: ")).setScore(1);
 
         final Team gun = scoreboard.registerNewTeam("gun");
@@ -46,11 +48,14 @@ public class QuakeScoreboard {
         player.setScoreboard(scoreboard);
     }
 
-    public void gameScoreboard(final QuakePlayer player, final Game game) {
+    public void gameScoreboard(final QuakePlayer player) {
         if (player == null) return;
-        if (game == null) return;
+        if (!player.isInGame()) return;
 
-        final String name = game.getArena().getName();
+        final Game game = plugin.getGameManager().getGameByPlayer(player);
+        if (game == null) return;
+        final Arena arena = game.getArena();
+        if (arena == null) return;
 
         final ScoreboardManager scoreboardManager = plugin.getServer().getScoreboardManager();
         org.bukkit.scoreboard.Scoreboard scoreboard = scoreboardManager.getNewScoreboard();
@@ -74,7 +79,7 @@ public class QuakeScoreboard {
         final Team map = scoreboard.registerNewTeam("map");
         map.addEntry(Utils.colorize("&bMap: &2"));
         map.setPrefix("");
-        map.setSuffix(Utils.colorize(name));
+        map.setSuffix(Utils.colorize(arena.getName()));
         objective.getScore(Utils.colorize("&bMap: &2")).setScore(3);
 
         final Team empty2 = scoreboard.registerNewTeam("empty2");

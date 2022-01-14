@@ -1,7 +1,7 @@
 package me.wolf.wquakecraft;
 
 import me.wolf.wquakecraft.arena.ArenaManager;
-import me.wolf.wquakecraft.commands.impl.QuakeCommand;
+import me.wolf.wquakecraft.commands.QuakeCommand;
 import me.wolf.wquakecraft.files.FileManager;
 import me.wolf.wquakecraft.game.GameManager;
 import me.wolf.wquakecraft.listeners.*;
@@ -55,7 +55,8 @@ public class QuakeCraftPlugin extends JavaPlugin {
                 new GameListeners(this),
                 new PlayerQuit(this),
                 new PlayerJoin(this),
-                new FoodChange(this)
+                new FoodChange(this),
+                new DamageListener()
         ).forEach(listener -> Bukkit.getPluginManager().registerEvents(listener, this));
     }
 

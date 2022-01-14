@@ -2,6 +2,7 @@ package me.wolf.wquakecraft.arena;
 
 import me.wolf.wquakecraft.files.YamlConfig;
 import me.wolf.wquakecraft.player.QuakePlayer;
+import me.wolf.wquakecraft.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 
@@ -44,31 +45,23 @@ public class ArenaManager {
                 final int maxKills = cfg.getConfig().getInt("arenas." + arenaName + ".max-kills");
                 final int powerupSpawn = cfg.getConfig().getInt("arenas." + arenaName + ".powerup-spawn-time");
 
-                final Location lobbyLoc = new Location(Bukkit.getWorld(Objects.requireNonNull(
-                        cfg.getConfig().getString("arenas." + arenaName + ".lobby-world"))),
-                        cfg.getConfig().getDouble("arenas." + arenaName + ".lobby-x"),
-                        cfg.getConfig().getDouble("arenas." + arenaName + ".lobby-y"),
-                        cfg.getConfig().getDouble("arenas." + arenaName + ".lobby-z"),
-                        (float) cfg.getConfig().getDouble("arenas." + arenaName + ".lobby-yaw"),
-                        (float) cfg.getConfig().getDouble("arenas." + arenaName + ".lobby-pitch"));
+                final Location lobbyLoc = Utils.stringToLoc(cfg.getConfig().getString("arenas." + arenaName + ".lobby-location").split(" "));
 
                 // we are not allowing more spawns then players.
-                for (int i = 1; i < maxPlayers + 1; i++) {
-                    spawnLocations.add(new Location(
-                            Bukkit.getWorld(Objects.requireNonNull(cfg.getConfig().getString("arenas." + arenaName + ".spawns." + i + ".world"))),
-                            cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".x"),
-                            cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".y"),
-                            cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".z"),
-                            (float) cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".yaw"),
-                            (float) cfg.getConfig().getDouble("arenas." + arenaName + ".spawns." + i + ".pitch")));
+                for (int i = 0; i < maxPlayers; i++) {
+                    if (cfg.getConfig().getString("arenas." + arenaName + ".spawns." + i + ".spawn") == null) continue;
+
+                    spawnLocations.add(Utils.stringToLoc(cfg.getConfig().getString("arenas." + arenaName + ".spawns." + i + ".spawn").split(" ")));
                 }
 
-                for (final String loc : cfg.getConfig().getConfigurationSection("arenas." + arenaName + ".powerups").getKeys(false)) {
-                    powerupLocations.add(
-                            new Location(Bukkit.getWorld(Objects.requireNonNull(cfg.getConfig().getString("arenas." + arenaName + ".powerups." + loc + ".powerup-world"))),
-                                    cfg.getConfig().getDouble("arenas." + arenaName + ".powerups." + loc + ".powerup-x"),
-                                    cfg.getConfig().getDouble("arenas." + arenaName + ".powerups." + loc + ".powerup-y"),
-                                    cfg.getConfig().getDouble("arenas." + arenaName + ".powerups." + loc + ".powerup-z")));
+                if (cfg.getConfig().getConfigurationSection("arenas." + arenaName + ".powerups") != null) {
+                    for (final String loc : cfg.getConfig().getConfigurationSection("arenas." + arenaName + ".powerups").getKeys(false)) {
+                        powerupLocations.add(
+                                new Location(Bukkit.getWorld(Objects.requireNonNull(cfg.getConfig().getString("arenas." + arenaName + ".powerups." + loc + ".powerup-world"))),
+                                        cfg.getConfig().getDouble("arenas." + arenaName + ".powerups." + loc + ".powerup-x"),
+                                        cfg.getConfig().getDouble("arenas." + arenaName + ".powerups." + loc + ".powerup-y"),
+                                        cfg.getConfig().getDouble("arenas." + arenaName + ".powerups." + loc + ".powerup-z")));
+                    }
                 }
 
                 arenas.add(new Arena(arenaName)
